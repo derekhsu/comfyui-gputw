@@ -54,4 +54,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 
 # shell form so ${COMFYUI_PORT} and ${COMFYUI_CPU} get substituted; python still handles SIGTERM via sh.
 # COMFYUI_CPU=1 forces ComfyUI's --cpu flag so the image can boot on a host without a GPU (smoke test only).
-CMD python main.py --listen 0.0.0.0 --port ${COMFYUI_PORT} $([ "${COMFYUI_CPU}" = "1" ] && echo --cpu)
+# Use python3 (no /usr/bin/python symlink exists in this base image).
+CMD python3 main.py --listen 0.0.0.0 --port ${COMFYUI_PORT} $([ "${COMFYUI_CPU}" = "1" ] && echo --cpu)
