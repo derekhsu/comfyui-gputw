@@ -27,7 +27,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    platform: linux/amd64
 
     permissions:
       contents: read
