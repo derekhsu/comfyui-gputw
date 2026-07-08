@@ -16,6 +16,10 @@ on:
         required: false
         default: "cu128"
         type: string
+      image_tag:
+        description: "Override image tag (default: v<comfyui>-<cuda_tag>-pt<torch> for tag push, 'dev' for manual)"
+        required: false
+        type: string
 
 env:
   IMAGE_NAME: derekhsu/comfyui-gputw
@@ -43,6 +47,17 @@ jobs:
             echo "comfyui_version=${{ inputs.comfyui_version }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Compute build args
+        id: args
+        run: |
+          # Use shell parameter expansion for actual fallback (GitHub Actions
+          # expression `||` does NOT fall back from empty string).
+          COMFYUI_VERSION="${{ steps.comfyui.outputs.comfyui_version }}"
+          PYTORCH_CUDA_TAG="${PYTORCH_CUDA_TAG:-${{ inputs.pytorch_cuda_tag }}}"
+          PYTORCH_CUDA_TAG="${PYTORCH_CUDA_TAG:-cu128}"
+          echo "pytorch_cuda_tag=${PYTORCH_CUDA_TAG}" >> "$GITHUB_OUTPUT"
+          echo "computed comfyui_version=${COMFYUI_VERSION} pytorch_cuda_tag=${PYTORCH_CUDA_TAG}"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -51,16 +66,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata (image tags)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=placeholder
-          flavor: |
-            latest=false
 
       - name: Build and push
         id: build
@@ -73,7 +78,7 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:placeholder
           build-args: |
             COMFYUI_VERSION=${{ steps.comfyui.outputs.comfyui_version }}
-            PYTORCH_CUDA_TAG=${{ inputs.pytorch_cuda_tag || 'cu128' }}
+            PYTORCH_CUDA_TAG=${{ steps.args.outputs.pytorch_cuda_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
@@ -81,20 +86,26 @@ jobs:
       - name: Read installed PyTorch version
         id: torch
         run: |
-          # image:tag of the just-built image
-          REF="${{ env.IMAGE_NAME }}:placeholder"
-          TORCH_VERSION=$(docker run --rm --platform linux/amd64 "$REF" \
+          TORCH_VERSION=$(docker run --rm --platform linux/amd64 "${{ env.IMAGE_NAME }}:placeholder" \
             python -c "import torch; print(torch.__version__)")
           echo "torch_version=$TORCH_VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected torch $TORCH_VERSION"
 
-      - name: Retag and push with combined tag
+      - name: Tag and push with final tag
         run: |
-          COMFYUI_VERSION_NO_V=$(echo "${{ steps.comfyui.outputs.comfyui_version }}" | sed 's/^v//')
-          PYTORCH_NO_DOTS=$(echo "${{ steps.torch.outputs.torch_version }}" | tr -d '+cu')
-          COMBINED_TAG="v${COMFYUI_VERSION_NO_V}-${{ inputs.pytorch_cuda_tag || 'cu128' }}-pt${PYTORCH_NO_DOTS}"
-          echo "Tagging as ${COMBINED_TAG}"
+          # Image tag priority:
+          #   1. user-supplied image_tag input (manual dispatch)
+          #   2. combined v<comfyui>-<cuda>-pt<torch> (tag push)
+          USER_TAG="${{ inputs.image_tag }}"
+          if [ -n "$USER_TAG" ]; then
+            FINAL_TAG="$USER_TAG"
+          else
+            COMFYUI_VERSION_NO_V=$(echo "${{ steps.comfyui.outputs.comfyui_version }}" | sed 's/^v//')
+            PYTORCH_NO_DOTS=$(echo "${{ steps.torch.outputs.torch_version }}" | tr -d '+cu')
+            FINAL_TAG="v${COMFYUI_VERSION_NO_V}-${{ steps.args.outputs.pytorch_cuda_tag }}-pt${PYTORCH_NO_DOTS}"
+          fi
+          echo "Tagging as ${FINAL_TAG}"
           docker buildx imagetools create \
-            -t "${{ env.IMAGE_NAME }}:${COMBINED_TAG}" \
+            -t "${{ env.IMAGE_NAME }}:${FINAL_TAG}" \
             "${{ env.IMAGE_NAME }}:placeholder"
-          docker buildx imagetools rm "${{ env.IMAGE_NAME }}:placeholder" 2>/dev/null || true
+          docker buildx imagetools rm "${{ env.IMAGE_NAME }}:placeholder" 2>&1 || true
