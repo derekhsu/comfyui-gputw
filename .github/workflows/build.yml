@@ -78,8 +78,15 @@ jobs:
           build-args: |
             COMFYUI_VERSION=${{ steps.comfyui.outputs.comfyui_version }}
             PYTORCH_CUDA_TAG=${{ steps.args.outputs.pytorch_cuda_tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # layer cache: read from GHA backend (scoped to the trigger) and also
+          # fall back to the public tag on the registry so cold starts still hit
+          # a usable cache after a long gap. Write back in `min` mode to keep
+          # the GHA cache size bounded (the heavy layers are PyTorch and
+          # ComfyUI's pip tree, both stable across most rebuilds).
+          cache-from: |
+            type=gha,scope=${{ github.workflow }}-${{ github.ref_name }}
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=gha,scope=${{ github.workflow }}-${{ github.ref_name }},mode=min
           provenance: false
 
       - name: Read installed PyTorch version
