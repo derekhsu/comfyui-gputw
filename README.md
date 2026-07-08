@@ -94,3 +94,21 @@ The container listens on `0.0.0.0:8080` so the gputw orchestrator can reach it.
 ## License
 
 This Dockerfile is provided as-is. ComfyUI itself is licensed under GPL-3.0.
+
+## CI
+
+`.github/workflows/build.yml` builds and pushes to Docker Hub on:
+
+- **Tag push** (`v*`): e.g. `git tag v0.27.0 && git push --tags` → image `derekhsu/comfyui-gputw:v0.27.0-cu128-pt2.7.0` (the `pt*` suffix is read from the actually-installed torch at build time)
+- **Manual dispatch**: Actions tab → Run workflow, with optional `comfyui_version` and `pytorch_cuda_tag` inputs
+
+Image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.27.0-cu128-pt2.7.0`. This lets gputw pin to a specific ComfyUI + CUDA + PyTorch combination.
+
+### Required secrets
+
+Set these in the repo's `Settings → Secrets and variables → Actions`:
+
+| Secret | Value |
+| --- | --- |
+| `DOCKERHUB_USERNAME` | Your Docker Hub username (`derekhsu`) |
+| `DOCKERHUB_TOKEN` | A Docker Hub access token with Read, Write, Delete permission ([generate here](https://hub.docker.com/settings/security)) |
