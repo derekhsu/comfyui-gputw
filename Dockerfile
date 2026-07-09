@@ -21,11 +21,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
     COMFYUI_PORT=${COMFYUI_PORT} \
     COMFYUI_CPU=${COMFYUI_CPU}
 
-# OS deps: python3 (Ubuntu 22.04 ships 3.10), libgl for Pillow/OpenCV, unzip for fetching ComfyUI.
+# OS deps: python3 (Ubuntu 22.04 ships 3.10), libgl/libsm/libxext for Pillow/OpenCV,
+# ffmpeg for video custom nodes (e.g. VideoHelperSuite), unzip for fetching ComfyUI.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-pip python3-venv \
         ca-certificates curl wget git unzip \
-        libgl1 libglib2.0-0 \
+        libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Fetch ComfyUI source as a zip — no .git history, smaller download and build context.
