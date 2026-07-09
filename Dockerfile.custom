@@ -38,5 +38,11 @@ RUN set -e; \
     done < /tmp/custom-nodes.txt; \
     rm /tmp/custom-nodes.txt
 
+# Wire the gputw shared vault (/vault/models) into ComfyUI's model scanner.
+# ComfyUI reads extra_model_paths.yaml from its root at startup; missing
+# subdirectories on the vault are ignored, so types can be declared ahead
+# of the actual files.
+COPY extra_model_paths.yaml ${COMFYUI_HOME}/extra_model_paths.yaml
+
 # Reset to ComfyUI home so the CMD inherited from the base image runs correctly.
 WORKDIR ${COMFYUI_HOME}

@@ -1,0 +1,34 @@
+# Extra model paths for ComfyUI on gputw.
+# Maps the shared persistent storage at /vault/models into ComfyUI's model
+# scanner so nodes can reference models without copying them into the image.
+#
+# ComfyUI reads this file from ${COMFYUI_HOME}/extra_model_paths.yaml at
+# startup. Missing subdirectories are simply ignored (no models listed for
+# that type), so it is safe to declare types ahead of the actual files.
+
+gputw_vault:
+    base_path: /vault/models
+    # Core model types (already populated on the vault)
+    checkpoints: checkpoints/
+    vae: vae/
+    diffusion_models: diffusion_models/
+    text_encoders: text_encoders/
+
+    # Common types declared preemptively so adding files later needs no
+    # image rebuild — just drop them into the matching subdirectory.
+    lora: lora/
+    loras: lora/
+    clip: clip/
+    clip_vision: clip_vision/
+    unet: diffusion_models/
+    unets: diffusion_models/
+    embeddings: embeddings/
+    controlnet: controlnet/
+    controlnets: controlnet/
+    upscale_models: upscale_models/
+    gligen: gligen/
+    hypernetworks: hypernetworks/
+    photomaker: photomaker/
+    style_models: style_models/
+    vae_approx: vae_approx/
+    configs: configs/
