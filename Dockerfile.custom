@@ -19,18 +19,24 @@ COPY custom-nodes.txt /tmp/custom-nodes.txt
 WORKDIR ${COMFYUI_HOME}/custom_nodes
 
 # Clone each node at the pinned ref and install its requirements if present.
-# --depth 1 keeps the clone small. The fallback to default branch keeps the
-# build resilient when a ref is not found; remove the `|| git clone` fallback
-# if you want strict pinning that fails on a bad ref.
+# --depth 1 keeps the clone small. When ref is empty, no --branch flag is
+# passed so git uses the repo's default branch (handles repos whose default
+# is "master" or "Main" instead of "main"). When ref is specified, a failed
+# --branch clone falls back to the default branch to keep the build resilient;
+# remove the `|| git clone` fallback for strict pinning that fails on a bad ref.
 RUN set -e; \
     while IFS=, read -r url ref; do \
       case "$url" in \#*|"") continue ;; esac; \
       [ -z "$url" ] && continue; \
-      ref="${ref:-main}"; \
       name=$(basename "$url" .git); \
-      echo "==> Cloning $name @ $ref"; \
-      git clone --depth 1 --branch "$ref" "$url" "$name" 2>/dev/null || \
+      if [ -n "$ref" ]; then \
+        echo "==> Cloning $name @ $ref"; \
+        git clone --depth 1 --branch "$ref" "$url" "$name" 2>/dev/null || \
+          git clone --depth 1 "$url" "$name"; \
+      else \
+        echo "==> Cloning $name @ default branch"; \
         git clone --depth 1 "$url" "$name"; \
+      fi; \
       if [ -f "$name/requirements.txt" ]; then \
         echo "==> Installing requirements for $name"; \
         pip install --no-cache-dir -r "$name/requirements.txt"; \

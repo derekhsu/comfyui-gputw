@@ -8,3 +8,29 @@
 # https://github.com/ltdrdata/ComfyUI-Impact-Pack,v7.1.1
 # https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite,
 https://github.com/nova452/ComfyUI-ConditioningKrea2Rebalance
+https://github.com/crystian/ComfyUI-Crystools.git
+https://github.com/Lightricks/ComfyUI-LTXVideo
+https://github.com/Comfy-Org/ComfyUI-Manager.git
+https://github.com/Merserk/ComfyUI-PiD
+https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git
+https://github.com/r-vage/RES4LYF
+https://github.com/jamesWalker55/comfyui-various
+https://github.com/city96/ComfyUI-GGUF
+https://github.com/pythongosssss/ComfyUI-Custom-Scripts
+https://github.com/yolain/ComfyUI-Easy-Use
+https://github.com/alexopus/ComfyUI-Image-Saver
+https://github.com/ltdrdata/ComfyUI-Impact-Pack
+https://github.com/ltdrdata/ComfyUI-Impact-Subpack
+https://github.com/kijai/ComfyUI-KJNodes
+https://github.com/willmiao/ComfyUI-Lora-Manager
+https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+https://github.com/Fannovel16/comfyui_controlnet_aux
+https://github.com/cubiq/ComfyUI_essentials
+https://github.com/chflame163/ComfyUI_LayerStyle
+https://github.com/jags111/efficiency-nodes-comfyui
+https://github.com/yawiii/ComfyUI-Prompt-Assistant
+https://github.com/lrzjason/Comfyui-QwenEditUtils
+https://github.com/rgthree/rgthree-comfy
+https://github.com/ChangeTheConstants/SeedVarianceEnhancer
+https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler
+https://github.com/WASasquatch/was-node-suite-comfyui
