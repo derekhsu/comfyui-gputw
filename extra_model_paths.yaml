@@ -5,6 +5,11 @@
 # ComfyUI reads this file from ${COMFYUI_HOME}/extra_model_paths.yaml at
 # startup. Missing subdirectories are simply ignored (no models listed for
 # that type), so it is safe to declare types ahead of the actual files.
+#
+# Keys MUST match ComfyUI's folder_names_and_paths (see folder_paths.py).
+# Invalid keys are silently ignored. The only legacy aliases are:
+#   unet  -> diffusion_models
+#   clip  -> text_encoders
 
 gputw_vault:
     base_path: /vault/models
@@ -13,18 +18,14 @@ gputw_vault:
     vae: vae/
     diffusion_models: diffusion_models/
     text_encoders: text_encoders/
+    loras: loras/
 
     # Common types declared preemptively so adding files later needs no
     # image rebuild — just drop them into the matching subdirectory.
-    lora: lora/
-    loras: lora/
     clip: clip/
     clip_vision: clip_vision/
-    unet: diffusion_models/
-    unets: diffusion_models/
     embeddings: embeddings/
     controlnet: controlnet/
-    controlnets: controlnet/
     upscale_models: upscale_models/
     gligen: gligen/
     hypernetworks: hypernetworks/
