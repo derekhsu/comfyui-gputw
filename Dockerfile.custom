@@ -50,5 +50,16 @@ RUN set -e; \
 # of the actual files.
 COPY extra_model_paths.yaml ${COMFYUI_HOME}/extra_model_paths.yaml
 
-# Reset to ComfyUI home so the CMD inherited from the base image runs correctly.
+# Entrypoint wrapper that loads secrets from /vault/secrets/ at startup
+# (gpuai supports no runtime env vars). Sources env.sh for HF_TOKEN etc.
+# and symlinks lora-manager-settings.json into ComfyUI-Lora-Manager/.
+# Missing files are silently skipped so the image boots fine without them.
+COPY entrypoint-wrapper.sh /opt/entrypoint-wrapper.sh
+RUN chmod +x /opt/entrypoint-wrapper.sh
+
+# Reset to ComfyUI home so the wrapper script runs in the right directory.
 WORKDIR ${COMFYUI_HOME}
+
+# Override the base image CMD with our wrapper. The base ENTRYPOINT
+# (nvidia_entrypoint.sh) is preserved and will exec this script.
+CMD ["/opt/entrypoint-wrapper.sh"]

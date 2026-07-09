@@ -60,6 +60,20 @@ on the vault are visible in the UI without copying them into the image.
 
 The container listens on `0.0.0.0:8080` so the gpuai orchestrator can reach it.
 
+### Secrets (API keys, tokens)
+
+gpuai supports no runtime env vars, but ComfyUI and custom nodes need secrets
+(HuggingFace token, CivitAI API key). The custom image uses an entrypoint
+wrapper to load them from `/vault/secrets/` at startup. Create these files
+directly on the vault (they never enter git or the image):
+
+| File in `/vault/secrets/` | Purpose | Example |
+| --- | --- | --- |
+| `env.sh` | Shell env vars (HuggingFace token, etc.) | `export HF_TOKEN=hf_xxxxxxxx` |
+| `lora-manager-settings.json` | LoraManager settings (CivitAI API key) | See [settings.json.example](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/settings.json.example) |
+
+All files are optional — missing files are silently skipped so the image boots fine without them.
+
 ### Local docker run (dev / smoke test only)
 
 The commands below are for local testing only — they do **not** reflect how

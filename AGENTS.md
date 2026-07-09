@@ -24,7 +24,19 @@ Implications for design decisions:
 - Runtime-overridable env vars (`COMFYUI_PORT`, `COMFYUI_CPU`) are **local dev only** — on gpuai they are fixed at build time. Do not design features that rely on runtime env overrides for production.
 - Model paths must be wired via `extra_model_paths.yaml` baked into the custom image, not via `-v` mounts.
 - Any config file ComfyUI needs at runtime must be COPY'd into the image, not mounted.
+- **Secrets (API keys, tokens)** must be stored in `/vault/secrets/` and loaded by `entrypoint-wrapper.sh` at startup. Never bake secrets into the image (it's on public Docker Hub). See "Secrets" section below.
 - Output persistence (`/opt/comfyui/output`) on gpuai is **TBD** — do not assume it is persistent.
+
+## Secrets (API keys, tokens)
+
+gpuai supports no runtime env vars, but ComfyUI and custom nodes need secrets (HuggingFace token, CivitAI API key). The custom image uses `entrypoint-wrapper.sh` to load them from `/vault/secrets/` at startup:
+
+| File in `/vault/secrets/` | Purpose | How it's loaded |
+| --- | --- | --- |
+| `env.sh` | Shell env vars (e.g. `export HF_TOKEN=hf_xxx`) | sourced by wrapper script |
+| `lora-manager-settings.json` | LoraManager settings (contains `civitai_api_key`) | symlinked into `custom_nodes/ComfyUI-Lora-Manager/settings.json` |
+
+All files are optional — missing files are silently skipped so the image boots fine without them. The user creates and manages these files directly on the vault; they never enter git or the image.
 
 ## Image architecture
 
@@ -59,6 +71,7 @@ Triggers: tag push (`v*`) and manual dispatch. Push to `main` does **not** auto-
 | `Dockerfile.custom` | Custom layer: clones `custom-nodes.txt`, copies `extra_model_paths.yaml` |
 | `custom-nodes.txt` | One node per line: `<git_url>,<ref>` (ref = branch/tag/SHA, empty = default) |
 | `extra_model_paths.yaml` | Maps `/vault/models` subdirs into ComfyUI's model scanner |
+| `entrypoint-wrapper.sh` | Loads secrets from `/vault/secrets/` at startup, then execs ComfyUI |
 | `.github/workflows/build.yml` | CI: build + build-custom jobs |
 
 ## Base image gotchas (learned the hard way)
