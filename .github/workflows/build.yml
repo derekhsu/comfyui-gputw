@@ -92,8 +92,8 @@ jobs:
       - name: Read installed PyTorch version
         id: torch
         run: |
-          TORCH_VERSION=$(docker run --rm --platform linux/amd64 "${{ env.IMAGE_NAME }}:placeholder" \
-            python3 -c "import torch; print(torch.__version__)")
+          TORCH_VERSION=$(docker run --rm --platform linux/amd64 --entrypoint python3 "${{ env.IMAGE_NAME }}:placeholder" \
+            -c "import torch; print(torch.__version__)")
           echo "torch_version=$TORCH_VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected torch $TORCH_VERSION"
 
