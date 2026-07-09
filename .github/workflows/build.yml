@@ -93,7 +93,7 @@ jobs:
         id: torch
         run: |
           TORCH_VERSION=$(docker run --rm --platform linux/amd64 "${{ env.IMAGE_NAME }}:placeholder" \
-            python -c "import torch; print(torch.__version__)")
+            python3 -c "import torch; print(torch.__version__)")
           echo "torch_version=$TORCH_VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected torch $TORCH_VERSION"
 
