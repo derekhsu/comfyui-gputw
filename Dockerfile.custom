@@ -1,0 +1,42 @@
+# Custom nodes layer for comfyui-gputw.
+# Builds on top of the base image (derekhsu/comfyui-gputw:<tag>) and adds
+# user-selected custom nodes listed in custom-nodes.txt.
+#
+# Build args:
+#   BASE_IMAGE  - full reference of the base image, e.g. derekhsu/comfyui-gputw:dev
+# amd64-only. Build with `docker buildx build --platform=linux/amd64 ...`.
+
+ARG BASE_IMAGE=derekhsu/comfyui-gputw:dev
+
+FROM ${BASE_IMAGE}
+
+# custom-nodes.txt format: <git_url>,<ref>
+#   - git_url: HTTPS clone URL of the custom node repo
+#   - ref:     branch, tag, or commit SHA (pinned for reproducibility)
+# Lines starting with # are comments. Empty lines are ignored.
+COPY custom-nodes.txt /tmp/custom-nodes.txt
+
+WORKDIR ${COMFYUI_HOME}/custom_nodes
+
+# Clone each node at the pinned ref and install its requirements if present.
+# --depth 1 keeps the clone small. The fallback to default branch keeps the
+# build resilient when a ref is not found; remove the `|| git clone` fallback
+# if you want strict pinning that fails on a bad ref.
+RUN set -e; \
+    while IFS=, read -r url ref; do \
+      case "$url" in \#*|"") continue ;; esac; \
+      [ -z "$url" ] && continue; \
+      ref="${ref:-main}"; \
+      name=$(basename "$url" .git); \
+      echo "==> Cloning $name @ $ref"; \
+      git clone --depth 1 --branch "$ref" "$url" "$name" 2>/dev/null || \
+        git clone --depth 1 "$url" "$name"; \
+      if [ -f "$name/requirements.txt" ]; then \
+        echo "==> Installing requirements for $name"; \
+        pip install --no-cache-dir -r "$name/requirements.txt"; \
+      fi; \
+    done < /tmp/custom-nodes.txt; \
+    rm /tmp/custom-nodes.txt
+
+# Reset to ComfyUI home so the CMD inherited from the base image runs correctly.
+WORKDIR ${COMFYUI_HOME}

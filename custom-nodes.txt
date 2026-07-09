@@ -1,0 +1,9 @@
+# Custom nodes to install on top of the comfyui-gputw base image.
+# Format: <git_url>,<ref>
+#   ref = branch / tag / commit SHA (leave empty for default branch)
+# Lines starting with # are comments. Empty lines are ignored.
+#
+# Examples (uncomment to use):
+# https://github.com/ltdrdata/ComfyUI-Manager,v2.5.0
+# https://github.com/ltdrdata/ComfyUI-Impact-Pack,v7.1.1
+# https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite,

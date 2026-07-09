@@ -98,6 +98,7 @@ jobs:
           echo "Detected torch $TORCH_VERSION"
 
       - name: Tag and push with final tag
+        id: tag
         run: |
           # Image tag priority:
           #   1. user-supplied image_tag input (manual dispatch)
@@ -115,3 +116,43 @@ jobs:
             -t "${{ env.IMAGE_NAME }}:${FINAL_TAG}" \
             "${{ env.IMAGE_NAME }}:placeholder"
           docker buildx imagetools rm "${{ env.IMAGE_NAME }}:placeholder" 2>&1 || true
+          echo "final_tag=${FINAL_TAG}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      final_tag: ${{ steps.tag.outputs.final_tag }}
+
+  build-custom:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push custom image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.custom
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:custom-${{ needs.build.outputs.final_tag }}
+          build-args: |
+            BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ needs.build.outputs.final_tag }}
+          # Separate cache scope from the base image so custom-node rebuilds
+          # do not evict base layers and vice versa.
+          cache-from: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }}
+          cache-to: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }},mode=min
+          provenance: false
