@@ -44,6 +44,27 @@ docker buildx build --platform=linux/amd64 \
 
 ## Run
 
+### Production: gpuai platform
+
+The image is built for the **gpuai** GPU service. On gpuai the deployment
+contract is restrictive — **you cannot specify volumes, command arguments,
+or environment variables at deploy time.** Everything must be baked into
+the image at build time.
+
+gpuai auto-mounts a persistent storage root at `/vault` for every container.
+Models live under `/vault/models` (user-managed subdirectory). The custom
+image (`derekhsu/comfyui-gputw:custom-<tag>`) ships an
+`extra_model_paths.yaml` that wires `/vault/models` into ComfyUI's model
+scanner, so checkpoints / VAEs / diffusion models / text encoders placed
+on the vault are visible in the UI without copying them into the image.
+
+The container listens on `0.0.0.0:8080` so the gpuai orchestrator can reach it.
+
+### Local docker run (dev / smoke test only)
+
+The commands below are for local testing only — they do **not** reflect how
+the image runs on gpuai (gpuai accepts no `-e` / `-v` / argument overrides).
+
 Production (with GPU):
 
 ```bash
@@ -52,7 +73,7 @@ docker run --gpus all -p 8080:8080 comfyui-gputw:local
 
 UI is at <http://localhost:8080>.
 
-### Override the port at runtime
+### Override the port at runtime (local only)
 
 ```bash
 docker run --gpus all -e COMFYUI_PORT=9090 -p 9090:9090 comfyui-gputw:local
@@ -71,11 +92,10 @@ docker run -e COMFYUI_CPU=1 -p 8080:8080 comfyui-gputw:local
 | Path | Purpose |
 | --- | --- |
 | `/opt/comfyui` | ComfyUI source tree |
-| `/opt/comfyui/models` | Checkpoints / VAEs / LoRAs — **mount as a persistent volume** |
-| `/opt/comfyui/output` | Generated images — **mount as a persistent volume** |
+| `/opt/comfyui/models` | ComfyUI's built-in model dir (empty; real models come from `/vault/models` via `extra_model_paths.yaml` in the custom image) |
+| `/opt/comfyui/output` | Generated images — persistent only when mounted; on gpuai this is **TBD** |
 | `/opt/comfyui/input` | Optional input directory |
-
-The container listens on `0.0.0.0:8080` so the gputw orchestrator can reach it.
+| `/vault/models` | gpuai persistent storage root (`/vault`) + user-managed `models/` — checkpoints, VAEs, diffusion models, text encoders, LoRAs, etc. |
 
 ## Host requirements
 
@@ -88,8 +108,8 @@ The container listens on `0.0.0.0:8080` so the gputw orchestrator can reach it.
 | --- | --- | --- |
 | `COMFYUI_VERSION` | `v0.27.0` | ComfyUI release tag; downloaded as a zip |
 | `PYTORCH_CUDA_TAG` | `cu128` | PyTorch wheel index suffix (e.g., `cu118`, `cu126`, `cu128`); the `nvidia/cuda` base image's CUDA version must be ≥ the one implied by this tag |
-| `COMFYUI_PORT` | `8080` | Sets the default listening port baked into the image. Runtime can still override via `docker run -e COMFYUI_PORT=9090` (or in `gpuai` config) without rebuilding. |
-| `COMFYUI_CPU` | `0` | When set to `1`, ComfyUI is launched with `--cpu` so the image can boot on a host without a GPU. Runtime can override via `docker run -e COMFYUI_CPU=1`. |
+| `COMFYUI_PORT` | `8080` | Sets the default listening port baked into the image. On gpuai this is fixed at build time (no runtime override). For local `docker run` you can still override via `-e COMFYUI_PORT=9090`. |
+| `COMFYUI_CPU` | `0` | When set to `1`, ComfyUI is launched with `--cpu` so the image can boot on a host without a GPU. On gpuai this is fixed at build time. For local `docker run` you can override via `-e COMFYUI_CPU=1`. |
 
 ## License
 
@@ -97,12 +117,21 @@ This Dockerfile is provided as-is. ComfyUI itself is licensed under GPL-3.0.
 
 ## CI
 
-`.github/workflows/build.yml` builds and pushes to Docker Hub on:
+`.github/workflows/build.yml` builds and pushes two images to Docker Hub:
 
-- **Tag push** (`v*`): e.g. `git tag v0.27.0 && git push --tags` → image `derekhsu/comfyui-gputw:v0.27.0-cu128-pt2.7.0` (the `pt*` suffix is read from the actually-installed torch at build time)
-- **Manual dispatch**: Actions tab → Run workflow, with optional `comfyui_version` and `pytorch_cuda_tag` inputs
+1. **Base image** (`Dockerfile`) — ComfyUI core + PyTorch. Tagged `derekhsu/comfyui-gputw:<final_tag>`.
+2. **Custom image** (`Dockerfile.custom`) — layers custom nodes + `extra_model_paths.yaml` on top of the base. Tagged `derekhsu/comfyui-gputw:custom-<final_tag>`. Runs only after the base job succeeds.
 
-Image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.27.0-cu128-pt2.7.0`. This lets gputw pin to a specific ComfyUI + CUDA + PyTorch combination.
+Triggers:
+
+- **Tag push** (`v*`): e.g. `git tag v0.27.0 && git push --tags` → base `:v0.27.0-cu128-pt2.11.0`, custom `:custom-v0.27.0-cu128-pt2.11.0` (the `pt*` suffix is read from the actually-installed torch at build time)
+- **Manual dispatch**: Actions tab → Run workflow, with optional `comfyui_version`, `pytorch_cuda_tag`, and `image_tag` inputs. Leave `image_tag` empty for auto-generated version tags; set it to `dev` for a floating dev tag.
+
+Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.27.0-cu128-pt2.11.0`. Custom image tags are `custom-` + the base tag. This lets gpuai pin to a specific ComfyUI + CUDA + PyTorch combination.
+
+### Adding custom nodes
+
+Edit `custom-nodes.txt` (one node per line, format `<git_url>,<ref>` where `ref` is branch/tag/SHA or empty for default branch), commit, and trigger the workflow. The base image is not rebuilt unless its own inputs change.
 
 ### Required secrets
 
