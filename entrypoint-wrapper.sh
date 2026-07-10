@@ -1,10 +1,18 @@
 #!/bin/sh
-# Entrypoint wrapper for comfyui-gputw custom image.
+# Entrypoint for comfyui-gputw custom image.
 #
-# Loads secrets (HuggingFace token, CivitAI API key, etc.) at startup.
-# gpuai now supports runtime env vars in the deploy form, so there are
-# two ways to provide secrets, with gpuai env vars taking priority:
+# This script is the image ENTRYPOINT (not CMD) so it ALWAYS runs, even
+# when gpuai replaces CMD with user-provided startup arguments. It:
+#   1. Loads secrets from /vault/secrets/ (gpuai env vars take priority)
+#   2. Symlinks LoraManager settings.json from the vault
+#   3. Defaults to the standard ComfyUI command if no args were passed
+#   4. exec's nvidia_entrypoint.sh (the base image's original entrypoint)
+#      which sets up the CUDA env and then runs the actual command
 #
+# gpuai startup arguments replace CMD, so they arrive as "$@". When no
+# args are given ($# = 0), we fall back to the default ComfyUI invocation.
+#
+# Secrets priority:
 #   1. gpuai deploy-form env vars (e.g. HF_TOKEN=hf_xxx) — highest priority
 #   2. /vault/secrets/env.sh — fallback for vars not set by gpuai
 #
@@ -45,6 +53,14 @@ if [ -d "$LORA_MANAGER_DIR" ] && [ -f /vault/secrets/lora-manager-settings.json 
     ln -sf /vault/secrets/lora-manager-settings.json "$LORA_MANAGER_DIR/settings.json"
 fi
 
-# 3. Start ComfyUI (same invocation as the base image CMD).
-#    exec so python3 replaces this shell and receives SIGTERM directly.
-exec python3 main.py --listen 0.0.0.0 --port ${COMFYUI_PORT} $([ "${COMFYUI_CPU}" = "1" ] && echo --cpu)
+# 3. Build the command to run.
+#    If gpuai provided startup args ($@), use them as-is. Otherwise fall
+#    back to the default ComfyUI invocation (same as the base image CMD).
+#    We then exec nvidia_entrypoint.sh — the base image's original
+#    ENTRYPOINT — which sets up the CUDA env (PATH, LD_LIBRARY_PATH, etc.)
+#    before exec'ing the command. This preserves GPU support while
+#    guaranteeing secrets are loaded regardless of whether gpuai set CMD.
+if [ $# -eq 0 ]; then
+    set -- python3 main.py --listen 0.0.0.0 --port "${COMFYUI_PORT}" $([ "${COMFYUI_CPU}" = "1" ] && echo --cpu)
+fi
+exec nvidia_entrypoint.sh "$@"

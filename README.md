@@ -69,9 +69,7 @@ to provide them, **gpuai env vars take priority**:
 1. **gpuai deploy-form env vars** (e.g. `HF_TOKEN=hf_xxx`) — for ad-hoc deployments
 2. **`/vault/secrets/` files** — persistent fallback, managed on the vault
 
-The custom image's `entrypoint-wrapper.sh` sources `/vault/secrets/env.sh` but
-restores any secret vars that gpuai already set, so deploy-form env vars always
-win. Create these files directly on the vault (they never enter git or the image):
+The custom image's `entrypoint-wrapper.sh` is set as the image **ENTRYPOINT** (not CMD), so it always runs — even when gpuai replaces CMD with startup arguments. It sources `/vault/secrets/env.sh` but restores any secret vars that gpuai already set, so deploy-form env vars always win. After loading secrets, it exec's `nvidia_entrypoint.sh` (the base image's original entrypoint, which sets up the CUDA env) with either the default ComfyUI command or the gpuai-provided startup args. Create these files directly on the vault (they never enter git or the image):
 
 | File in `/vault/secrets/` | Purpose | Example |
 | --- | --- | --- |

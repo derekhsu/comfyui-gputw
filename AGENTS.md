@@ -32,7 +32,7 @@ ComfyUI and custom nodes need secrets (HuggingFace token, CivitAI API key). Sinc
 1. **gpuai deploy-form env vars** (e.g. `HF_TOKEN=hf_xxx`) — highest priority, use for ad-hoc/temporary deployments
 2. **`/vault/secrets/` files** — fallback for persistent deployments, managed by the user on the vault
 
-The custom image's `entrypoint-wrapper.sh` implements this priority: it sources `/vault/secrets/env.sh` but restores any secret vars that gpuai already set, so deploy-form env vars always win.
+The custom image's `entrypoint-wrapper.sh` is set as the image **ENTRYPOINT** (not CMD) so it always runs, even when gpuai replaces CMD with startup arguments. It sources `/vault/secrets/env.sh` but restores any secret vars that gpuai already set, so deploy-form env vars always win. After loading secrets, it exec's `nvidia_entrypoint.sh` (the base image's original entrypoint, which sets up the CUDA env) with either the default ComfyUI command or the gpuai-provided startup args.
 
 | Source | Purpose | How it's loaded |
 | --- | --- | --- |
