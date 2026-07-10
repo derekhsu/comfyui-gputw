@@ -63,4 +63,6 @@ fi
 if [ $# -eq 0 ]; then
     set -- python3 main.py --listen 0.0.0.0 --port "${COMFYUI_PORT}" $([ "${COMFYUI_CPU}" = "1" ] && echo --cpu)
 fi
-exec nvidia_entrypoint.sh "$@"
+# Full path required: nvidia_entrypoint.sh lives in /opt/nvidia/ which is
+# NOT in PATH (only /opt/nvidia/bin is, for nvidia-smi).
+exec /opt/nvidia/nvidia_entrypoint.sh "$@"
