@@ -46,12 +46,12 @@ docker buildx build --platform=linux/amd64 \
 
 ### Production: gpuai platform
 
-The image is built for the **gpuai** GPU service. On gpuai the deployment
-contract is restrictive — **you cannot specify volumes, command arguments,
-or environment variables at deploy time.** Everything must be baked into
-the image at build time.
+The image is built for the **gpuai** GPU service. gpuai supports:
 
-gpuai auto-mounts a persistent storage root at `/vault` for every container.
+- **Environment variables**: `KEY=VALUE` per line in the deploy form
+- **Startup arguments**: per-line args that replace the image CMD (ENTRYPOINT preserved)
+- **Volumes**: NOT supported — only `/vault` (persistent storage root) is auto-mounted
+
 Models live under `/vault/models` (user-managed subdirectory). The custom
 image (`derekhsu/comfyui-gputw:custom-<tag>`) ships an
 `extra_model_paths.yaml` that wires `/vault/models` into ComfyUI's model
@@ -62,15 +62,21 @@ The container listens on `0.0.0.0:8080` so the gpuai orchestrator can reach it.
 
 ### Secrets (API keys, tokens)
 
-gpuai supports no runtime env vars, but ComfyUI and custom nodes need secrets
-(HuggingFace token, CivitAI API key). The custom image uses an entrypoint
-wrapper to load them from `/vault/secrets/` at startup. Create these files
-directly on the vault (they never enter git or the image):
+ComfyUI and custom nodes need secrets (HuggingFace token, CivitAI API key).
+Since the image is on public Docker Hub, secrets cannot be baked in. Two ways
+to provide them, **gpuai env vars take priority**:
+
+1. **gpuai deploy-form env vars** (e.g. `HF_TOKEN=hf_xxx`) — for ad-hoc deployments
+2. **`/vault/secrets/` files** — persistent fallback, managed on the vault
+
+The custom image's `entrypoint-wrapper.sh` sources `/vault/secrets/env.sh` but
+restores any secret vars that gpuai already set, so deploy-form env vars always
+win. Create these files directly on the vault (they never enter git or the image):
 
 | File in `/vault/secrets/` | Purpose | Example |
 | --- | --- | --- |
-| `env.sh` | Shell env vars (HuggingFace token, etc.) | `export HF_TOKEN=hf_xxxxxxxx` |
-| `lora-manager-settings.json` | LoraManager settings (CivitAI API key) | See [settings.json.example](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/settings.json.example) |
+| `env.sh` | Shell env vars (fallback if not set via gpuai) | `export HF_TOKEN=hf_xxxxxxxx` |
+| `lora-manager-settings.json` | LoraManager settings (CivitAI API key, JSON) | See [settings.json.example](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/settings.json.example) |
 
 All files are optional — missing files are silently skipped so the image boots fine without them.
 

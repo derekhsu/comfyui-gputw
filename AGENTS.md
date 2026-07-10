@@ -11,32 +11,38 @@ Container image for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that ru
 
 ## Critical: gpuai deployment constraints
 
-**gpuai accepts NO runtime configuration from the user.** You cannot specify:
+gpuai now supports **runtime env vars** and **startup arguments** in the deploy form (see https://docs.gputw.ai/templates). Specifically:
 
-- Volumes (`-v`)
-- Command arguments
-- Environment variables (`-e`)
-
-Everything must be baked into the image at build time. The only platform-provided mount is `/vault` (persistent storage root, auto-mounted). The user manages subdirectories under it (e.g. `/vault/models`).
+- **Environment variables**: `KEY=VALUE` per line in the deploy form, injected as container env vars
+- **Startup arguments**: per-line args that **replace the image CMD** (ENTRYPOINT is preserved)
+- **Volumes**: still NOT supported — the only platform-provided mount is `/vault` (persistent storage root, auto-mounted)
 
 Implications for design decisions:
 
-- Runtime-overridable env vars (`COMFYUI_PORT`, `COMFYUI_CPU`) are **local dev only** — on gpuai they are fixed at build time. Do not design features that rely on runtime env overrides for production.
+- Runtime env vars (`COMFYUI_PORT`, `COMFYUI_CPU`, `HF_TOKEN`, etc.) CAN now be set via the gpuai deploy form. But for reproducibility, secrets should still default to `/vault/secrets/` so the same image works without manual deploy-form entry.
 - Model paths must be wired via `extra_model_paths.yaml` baked into the custom image, not via `-v` mounts.
 - Any config file ComfyUI needs at runtime must be COPY'd into the image, not mounted.
-- **Secrets (API keys, tokens)** must be stored in `/vault/secrets/` and loaded by `entrypoint-wrapper.sh` at startup. Never bake secrets into the image (it's on public Docker Hub). See "Secrets" section below.
+- **Secrets (API keys, tokens)**: see "Secrets" section below.
 - Output persistence (`/opt/comfyui/output`) on gpuai is **TBD** — do not assume it is persistent.
 
 ## Secrets (API keys, tokens)
 
-gpuai supports no runtime env vars, but ComfyUI and custom nodes need secrets (HuggingFace token, CivitAI API key). The custom image uses `entrypoint-wrapper.sh` to load them from `/vault/secrets/` at startup:
+ComfyUI and custom nodes need secrets (HuggingFace token, CivitAI API key). Since the image is on public Docker Hub, secrets cannot be baked in. Two ways to provide them, **gpuai env vars take priority**:
 
-| File in `/vault/secrets/` | Purpose | How it's loaded |
+1. **gpuai deploy-form env vars** (e.g. `HF_TOKEN=hf_xxx`) — highest priority, use for ad-hoc/temporary deployments
+2. **`/vault/secrets/` files** — fallback for persistent deployments, managed by the user on the vault
+
+The custom image's `entrypoint-wrapper.sh` implements this priority: it sources `/vault/secrets/env.sh` but restores any secret vars that gpuai already set, so deploy-form env vars always win.
+
+| Source | Purpose | How it's loaded |
 | --- | --- | --- |
-| `env.sh` | Shell env vars (e.g. `export HF_TOKEN=hf_xxx`) | sourced by wrapper script |
-| `lora-manager-settings.json` | LoraManager settings (contains `civitai_api_key`) | symlinked into `custom_nodes/ComfyUI-Lora-Manager/settings.json` |
+| gpuai deploy-form env vars | `HF_TOKEN`, `CIVITAI_API_KEY`, etc. | injected by gpuai at container start |
+| `/vault/secrets/env.sh` | Shell env vars (fallback) | sourced by wrapper script (does not override gpuai-set vars) |
+| `/vault/secrets/lora-manager-settings.json` | LoraManager settings (JSON, contains `civitai_api_key`) | symlinked into `custom_nodes/ComfyUI-Lora-Manager/settings.json` |
 
-All files are optional — missing files are silently skipped so the image boots fine without them. The user creates and manages these files directly on the vault; they never enter git or the image.
+All vault files are optional — missing files are silently skipped so the image boots fine without them. The user creates and manages these files directly on the vault; they never enter git or the image.
+
+Secret var names currently tracked for priority handling (in `entrypoint-wrapper.sh`): `HF_TOKEN`, `HUGGING_FACE_HUB_TOKEN`, `CIVITAI_API_KEY`. Add new ones to `SECRETS_VARS` in the wrapper script as needed.
 
 ## Image architecture
 
@@ -110,7 +116,8 @@ docker manifest inspect derekhsu/comfyui-gputw:<tag> --verbose
 ## Things NOT to do
 
 - Don't add `python` (without `3`) anywhere — use `python3`.
-- Don't add runtime `-v` / `-e` based features as if they work on gpuai — they don't.
+- Don't add runtime `-v` volume mounts — gpuai still doesn't support them. Use `/vault` (auto-mounted) or bake config into the image.
+- Don't bake secrets into the image (ENV or ARG) — the image is on public Docker Hub. Use `/vault/secrets/` or gpuai deploy-form env vars.
 - Don't put gpuai-specific paths (`/vault/...`) in the base Dockerfile — keep base generic; gpuai config goes in `Dockerfile.custom`.
 - Don't use `cache-to: type=gha,mode=max` — it grows unbounded and risks GHA cache eviction. Use `mode=min`.
 - Don't use unscoped GHA cache (`type=gha` without `scope=`) — different triggers will collide.
