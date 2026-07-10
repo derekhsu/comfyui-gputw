@@ -142,10 +142,10 @@ This Dockerfile is provided as-is. ComfyUI itself is licensed under GPL-3.0.
 
 Triggers:
 
-- **Tag push** (`v*`): e.g. `git tag v0.27.0 && git push --tags` → base `:v0.27.0-cu128-pt2.11.0`, custom `:custom-v0.27.0-cu128-pt2.11.0` (the `pt*` suffix is read from the actually-installed torch at build time)
-- **Manual dispatch**: Actions tab → Run workflow, with optional `comfyui_version`, `pytorch_cuda_tag`, and `image_tag` inputs. Leave `image_tag` empty for auto-generated version tags; set it to `dev` for a floating dev tag.
+- **Tag push** (`v*`): e.g. `git tag v0.27.0 && git push --tags` → base `:v0.27.0-cu128-pt2.11.0` + `:latest`, custom `:custom-v0.27.0-cu128-pt2.11.0` + `:custom-latest` (the `pt*` suffix is read from the actually-installed torch at build time)
+- **Manual dispatch**: Actions tab → Run workflow, with optional `comfyui_version`, `pytorch_cuda_tag`, and `image_tag` inputs. Leave `image_tag` empty for auto-generated version tags (also gets `latest`/`custom-latest`); set it to `dev` for a floating dev tag (no `latest` alias).
 
-Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.27.0-cu128-pt2.11.0`. Custom image tags are `custom-` + the base tag. This lets gpuai pin to a specific ComfyUI + CUDA + PyTorch combination.
+Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.27.0-cu128-pt2.11.0`. Custom image tags are `custom-` + the base tag. This lets gpuai pin to a specific ComfyUI + CUDA + PyTorch combination. For production, deploy the pinned `custom-<version>` tag; for ad-hoc testing, use `custom-latest`.
 
 ### Adding custom nodes
 

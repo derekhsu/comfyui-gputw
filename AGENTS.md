@@ -53,10 +53,20 @@ derekhsu/comfyui-gputw:custom-<final_tag>       ← custom (Dockerfile.custom, F
 
 `<final_tag>` is computed in CI:
 
-- Manual dispatch with `image_tag` input → that value (e.g. `dev`)
-- Tag push (`v*`) → `v<comfyui>-<cuda>-pt<torch>` (torch version read from the built image)
+- Manual dispatch with `image_tag` input → that value (e.g. `dev`). No `latest` alias is created.
+- Tag push (`v*`) or manual dispatch without `image_tag` → `v<comfyui>-<cuda>-pt<torch>` (torch version read from the built image, `+cuXXX` suffix stripped). Also tagged as `latest` (base) and `custom-latest` (custom).
 
 Custom tag is always `custom-` + base tag. The two are always built in the same workflow run and are version-aligned.
+
+Tag format breakdown (`v0.27.0-cu128-pt2.6.0`):
+
+| Segment | Meaning | Source |
+| --- | --- | --- |
+| `v0.27.0` | ComfyUI version | git tag or `comfyui_version` input |
+| `cu128` | PyTorch CUDA wheel tag | `pytorch_cuda_tag` input |
+| `pt2.6.0` | PyTorch version | `torch.__version__` read from the built image |
+
+For production deployments, use the pinned `custom-<final_tag>` tag for reproducibility. Use `custom-latest` for ad-hoc/testing deployments that should track the newest release.
 
 ## CI
 

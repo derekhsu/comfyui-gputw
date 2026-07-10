@@ -108,12 +108,16 @@ jobs:
             FINAL_TAG="$USER_TAG"
           else
             COMFYUI_VERSION_NO_V=$(echo "${{ steps.comfyui.outputs.comfyui_version }}" | sed 's/^v//')
-            PYTORCH_NO_DOTS=$(echo "${{ steps.torch.outputs.torch_version }}" | tr -d '+cu')
+            # torch.__version__ for CUDA wheels reports e.g. "2.6.0+cu128";
+            # strip the "+cuXXX" local-version suffix to get "2.6.0".
+            # (tr -d '+cu' would delete individual chars and corrupt the version.)
+            PYTORCH_NO_DOTS=$(echo "${{ steps.torch.outputs.torch_version }}" | sed 's/+cu.*//')
             FINAL_TAG="v${COMFYUI_VERSION_NO_V}-${{ steps.args.outputs.pytorch_cuda_tag }}-pt${PYTORCH_NO_DOTS}"
           fi
           echo "Tagging as ${FINAL_TAG}"
           docker buildx imagetools create \
             -t "${{ env.IMAGE_NAME }}:${FINAL_TAG}" \
+            -t "${{ env.IMAGE_NAME }}:latest" \
             "${{ env.IMAGE_NAME }}:placeholder"
           docker buildx imagetools rm "${{ env.IMAGE_NAME }}:placeholder" 2>&1 || true
           echo "final_tag=${FINAL_TAG}" >> "$GITHUB_OUTPUT"
@@ -156,3 +160,11 @@ jobs:
           cache-from: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }}
           cache-to: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }},mode=min
           provenance: false
+
+      - name: Tag custom-latest (versioned builds only)
+        if: ${{ !inputs.image_tag }}
+        run: |
+          docker buildx imagetools create \
+            -t "${{ env.IMAGE_NAME }}:custom-latest" \
+            "${{ env.IMAGE_NAME }}:custom-${{ needs.build.outputs.final_tag }}"
+          echo "Also tagged custom-latest -> custom-${{ needs.build.outputs.final_tag }}"
