@@ -5,12 +5,14 @@
 # when gpuai replaces CMD with user-provided startup arguments. It:
 #   1. Loads secrets from /vault/secrets/ (gpuai env vars take priority)
 #   2. Symlinks LoraManager settings.json from the vault
-#   3. Defaults to the standard ComfyUI command if no args were passed
+#   3. Builds the default ComfyUI command and APPENDS any gpuai-provided
+#      startup args as extra parameters
 #   4. exec's nvidia_entrypoint.sh (the base image's original entrypoint)
 #      which sets up the CUDA env and then runs the actual command
 #
-# gpuai startup arguments replace CMD, so they arrive as "$@". When no
-# args are given ($# = 0), we fall back to the default ComfyUI invocation.
+# gpuai startup arguments replace CMD, so they arrive as "$@". They are
+# appended to the default ComfyUI invocation so users only need to pass
+# the flags they want to add or override (e.g. --port 9000).
 #
 # Secrets priority:
 #   1. gpuai deploy-form env vars (e.g. HF_TOKEN=hf_xxx) — highest priority
@@ -54,15 +56,19 @@ if [ -d "$LORA_MANAGER_DIR" ] && [ -f /vault/secrets/lora-manager-settings.json 
 fi
 
 # 3. Build the command to run.
-#    If gpuai provided startup args ($@), use them as-is. Otherwise fall
-#    back to the default ComfyUI invocation (same as the base image CMD).
+#    The default ComfyUI invocation is ALWAYS used as the base command,
+#    and any gpuai-provided startup args ($@) are APPENDED as extra
+#    parameters. This lets users pass just the flags they want to tweak
+#    (e.g. --port 9000) without rewriting the whole command.
+#    ComfyUI's argparse takes the last value for repeated options, so
+#    overriding --port etc. by passing it again works as expected.
+#    To run an arbitrary command (e.g. a shell) instead of ComfyUI,
+#    bypass the wrapper with `docker run --entrypoint <cmd> ...`.
 #    We then exec nvidia_entrypoint.sh — the base image's original
 #    ENTRYPOINT — which sets up the CUDA env (PATH, LD_LIBRARY_PATH, etc.)
 #    before exec'ing the command. This preserves GPU support while
 #    guaranteeing secrets are loaded regardless of whether gpuai set CMD.
-if [ $# -eq 0 ]; then
-    set -- python3 main.py --listen 0.0.0.0 --port "${COMFYUI_PORT}" $([ "${COMFYUI_CPU}" = "1" ] && echo --cpu)
-fi
+set -- python3 main.py --listen 0.0.0.0 --port "${COMFYUI_PORT}" $([ "${COMFYUI_CPU}" = "1" ] && echo --cpu) "$@"
 # Full path required: nvidia_entrypoint.sh lives in /opt/nvidia/ which is
 # NOT in PATH (only /opt/nvidia/bin is, for nvidia-smi).
 exec /opt/nvidia/nvidia_entrypoint.sh "$@"

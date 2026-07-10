@@ -63,6 +63,7 @@ RUN chmod +x /opt/entrypoint-wrapper.sh
 WORKDIR ${COMFYUI_HOME}
 
 # Replace the base ENTRYPOINT with our wrapper. No CMD is set — the
-# wrapper provides a default ComfyUI invocation when no args are passed.
-# gpuai startup args arrive as "$@" and are forwarded to nvidia_entrypoint.sh.
+# wrapper always provides the default ComfyUI invocation and appends any
+# gpuai startup args (which replace CMD and arrive as "$@") as extra
+# parameters, so users only pass the flags they want to add or override.
 ENTRYPOINT ["/opt/entrypoint-wrapper.sh"]
