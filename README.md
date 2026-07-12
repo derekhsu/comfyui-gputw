@@ -105,6 +105,28 @@ For a no-GPU x86_64 host (e.g. a Linux dev box without an NVIDIA driver) where y
 docker run -e COMFYUI_CPU=1 -p 8080:8080 comfyui-gputw:local
 ```
 
+## Environment variables
+
+All variables below are baked into the image via `ENV` and can be
+overridden at runtime — on gpuai via the deploy-form env vars, or
+locally via `docker run -e`.
+
+| Variable | Default | Purpose | Override on gpuai? |
+| --- | --- | --- | --- |
+| `COMFYUI_PORT` | `8080` | Port ComfyUI listens on | Yes (deploy-form env var) |
+| `COMFYUI_CPU` | `0` | Set to `1` to launch ComfyUI with `--cpu` (smoke test only, no GPU inference) | Yes |
+| `HF_HUB_ENABLE_HF_TRANSFER` | `1` | Enables Rust-based `hf_transfer` for faster HuggingFace downloads. Set to `0` to fall back to Python requests (useful for debugging download failures — hf-transfer has no progress bar / resume / proxy support) | Yes |
+| `HF_TOKEN` | (unset) | HuggingFace token for gated models. Set via gpuai deploy-form env var or `/vault/secrets/env.sh` (gpuai wins) | Yes |
+| `HUGGING_FACE_HUB_TOKEN` | (unset) | Alternate HuggingFace token var name, same priority as `HF_TOKEN` | Yes |
+| `CIVITAI_API_KEY` | (unset) | CivitAI API key for LoRA downloads. Set via gpuai deploy-form env var or `/vault/secrets/env.sh` (gpuai wins) | Yes |
+
+Secrets (`HF_TOKEN`, `HUGGING_FACE_HUB_TOKEN`, `CIVITAI_API_KEY`) are
+**not** baked into the image — the image is public on Docker Hub. They
+default to unset and are loaded at container start by
+`entrypoint-wrapper.sh` from `/vault/secrets/env.sh`, unless gpuai
+deploy-form env vars already provide them (in which case gpuai wins).
+See the [Secrets](#secrets-api-keys-tokens) section below.
+
 ## Layout
 
 | Path | Purpose |

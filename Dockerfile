@@ -19,7 +19,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     COMFYUI_HOME=/opt/comfyui \
     COMFYUI_PORT=${COMFYUI_PORT} \
-    COMFYUI_CPU=${COMFYUI_CPU}
+    COMFYUI_CPU=${COMFYUI_CPU} \
+    HF_HUB_ENABLE_HF_TRANSFER=1
 
 # OS deps: python3 (Ubuntu 22.04 ships 3.10), libgl/libsm/libxext for Pillow/OpenCV,
 # ffmpeg for video custom nodes (e.g. VideoHelperSuite), unzip for fetching ComfyUI.
@@ -44,7 +45,8 @@ WORKDIR ${COMFYUI_HOME}
 RUN pip install --no-cache-dir \
         torch torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/${PYTORCH_CUDA_TAG} \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir hf hf-transfer
 
 EXPOSE ${COMFYUI_PORT}
 
