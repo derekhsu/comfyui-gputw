@@ -137,6 +137,39 @@ See the [Secrets](#secrets-api-keys-tokens) section below.
 | `/opt/comfyui/input` | Optional input directory |
 | `/vault/models` | gpuai persistent storage root (`/vault`) + user-managed `models/` — checkpoints, VAEs, diffusion models, text encoders, LoRAs, etc. |
 
+## Persisting user data (settings, workflows, db)
+
+By default ComfyUI stores user settings, saved workflows, and the
+`comfyui.db` SQLite database under `/opt/comfyui/user/`, which is
+**non-persistent** on gpuai — a container restart loses them all.
+
+To persist them on the vault, pass `--user-directory` via gpuai startup
+args (the wrapper appends args to the default command, so you only need
+to pass the flag itself):
+
+```
+--user-directory /vault/comfyui-user
+```
+
+The directory **must exist and be readable** before ComfyUI starts, or
+it will refuse to boot. Create it on the vault once:
+
+```bash
+# from inside the running container, or via a vault-side shell
+mkdir -p /vault/comfyui-user
+```
+
+This covers `comfyui.db` too (it defaults to `<user-directory>/comfyui.db`).
+To place the database elsewhere, also pass `--database-url`:
+
+```
+--user-directory /vault/comfyui-user --database-url sqlite:////vault/comfyui-user/comfyui.db
+```
+
+`--base-directory` is a broader override that also moves models / output
+/ input / temp / custom_nodes — avoid it on this image, it conflicts
+with the baked-in `/opt/comfyui` layout and `extra_model_paths.yaml`.
+
 ## Host requirements
 
 - **Production:** NVIDIA GPU with a driver that supports CUDA 12.8, plus [`nvidia-container-toolkit`](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for `--gpus all`
