@@ -74,9 +74,26 @@ The custom image's `entrypoint-wrapper.sh` is set as the image **ENTRYPOINT** (n
 | File in `/vault/secrets/` | Purpose | Example |
 | --- | --- | --- |
 | `env.sh` | Shell env vars (fallback if not set via gpuai) | `export HF_TOKEN=hf_xxxxxxxx` |
-| `lora-manager-settings.json` | LoraManager settings (CivitAI API key, JSON) | See [settings.json.example](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/settings.json.example) |
+| `lora-manager-settings.json` | LoraManager settings (CivitAI API key, example images path, JSON) | See [settings.json.example](https://github.com/willmiao/ComfyUI-Lora-Manager/blob/main/settings.json.example) |
 
 All files are optional — missing files are silently skipped so the image boots fine without them.
+
+#### LoraManager settings.json handling
+
+`lora-manager-settings.json` is **copied** (not symlinked) into `~/.config/ComfyUI-LoRA-Manager/settings.json` at container start. Lora Manager's default behavior reads from that user config dir and writes auto-init content (e.g. `folder_paths` discovered from ComfyUI, `civitai_api_key` overridden by the `CIVITAI_API_KEY` env var) back to that file. Copying keeps the vault source clean — only the keys you put in the vault file are persisted; everything Lora Manager auto-fills lands in the ephemeral container copy. No `LORA_MANAGER_PORTABLE` override is needed.
+
+A minimal vault file only needs the keys you want to persist across restarts; everything else is auto-initialized:
+
+```json
+{
+  "civitai_api_key": "your_civitai_api_key",
+  "example_images_path": "/vault/example_images",
+  "example_images_open_mode": "copy_local_path",
+  "example_images_local_root": "/Volumes/lora-manager/example_images"
+}
+```
+
+`civitai_api_key` may also be provided via the `CIVITAI_API_KEY` env var (gpuai deploy form or `/vault/secrets/env.sh`); the env var takes priority and overwrites the value in the copied settings.json at startup.
 
 ### Local docker run (dev / smoke test only)
 

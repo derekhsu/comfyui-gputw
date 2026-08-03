@@ -4,7 +4,7 @@
 # This script is the image ENTRYPOINT (not CMD) so it ALWAYS runs, even
 # when gpuai replaces CMD with user-provided startup arguments. It:
 #   1. Loads secrets from /vault/secrets/ (gpuai env vars take priority)
-#   2. Symlinks LoraManager settings.json from the vault
+#   2. Seeds LoraManager settings.json into ~/.config from the vault
 #   3. Builds the default ComfyUI command and APPENDS any gpuai-provided
 #      startup args as extra parameters
 #   4. exec's nvidia_entrypoint.sh (the base image's original entrypoint)
@@ -19,13 +19,18 @@
 #   2. /vault/secrets/env.sh — fallback for vars not set by gpuai
 #
 # For LoraManager's settings.json (a JSON file, not a single env var),
-# we symlink from /vault/secrets/ since env vars can't carry JSON.
+# we COPY from /vault/secrets/ into the user config dir
+# (~/.config/ComfyUI-LoRA-Manager/settings.json on Linux). Copying (not
+# symlinking) keeps the vault source clean: Lora Manager auto-init writes
+# (folder_paths, env-var-overridden civitai_api_key) land in the ephemeral
+# copy, not back in the vault. Lora Manager's default behavior reads from
+# the user config dir, so no LORA_MANAGER_PORTABLE override is needed.
 #
 # Files consumed (all optional — missing files are silently skipped):
 #   /vault/secrets/env.sh                       — sourced as shell env vars
 #                                                 (e.g. export HF_TOKEN=...)
-#   /vault/secrets/lora-manager-settings.json   — symlinked into
-#                                                 ComfyUI-Lora-Manager/settings.json
+#   /vault/secrets/lora-manager-settings.json   — copied to
+#                                                 ~/.config/ComfyUI-LoRA-Manager/settings.json
 
 # 1. Load env vars from vault, but let gpuai deploy-form env vars win.
 #    Strategy: snapshot the known secret vars BEFORE sourcing env.sh,
@@ -48,11 +53,19 @@ for _v in $SECRETS_VARS; do
     fi
 done
 
-# 2. Symlink LoraManager settings.json (contains civitai_api_key)
-LORA_MANAGER_DIR="${COMFYUI_HOME}/custom_nodes/ComfyUI-Lora-Manager"
-if [ -d "$LORA_MANAGER_DIR" ] && [ -f /vault/secrets/lora-manager-settings.json ]; then
-    echo "[entrypoint] Linking LoraManager settings from /vault/secrets/"
-    ln -sf /vault/secrets/lora-manager-settings.json "$LORA_MANAGER_DIR/settings.json"
+# 2. Seed LoraManager settings.json from vault (copy, not symlink).
+#    Lora Manager's default behavior reads from the user config dir
+#    (~/.config/ComfyUI-LoRA-Manager/settings.json on Linux) and writes
+#    auto-init content (folder_paths, env-var-overridden civitai_api_key)
+#    back to that file. Copying from vault keeps the vault source clean
+#    while letting Lora Manager write freely to the ephemeral copy.
+LORA_MANAGER_SRC="/vault/secrets/lora-manager-settings.json"
+LORA_MANAGER_DST_DIR="${HOME}/.config/ComfyUI-LoRA-Manager"
+LORA_MANAGER_DST="${LORA_MANAGER_DST_DIR}/settings.json"
+if [ -f "$LORA_MANAGER_SRC" ]; then
+    echo "[entrypoint] Seeding LoraManager settings from /vault/secrets/"
+    mkdir -p "$LORA_MANAGER_DST_DIR"
+    cp -f "$LORA_MANAGER_SRC" "$LORA_MANAGER_DST"
 fi
 
 # 3. Build the command to run.

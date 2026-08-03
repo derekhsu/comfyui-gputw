@@ -38,7 +38,7 @@ The custom image's `entrypoint-wrapper.sh` is set as the image **ENTRYPOINT** (n
 | --- | --- | --- |
 | gpuai deploy-form env vars | `HF_TOKEN`, `CIVITAI_API_KEY`, etc. | injected by gpuai at container start |
 | `/vault/secrets/env.sh` | Shell env vars (fallback) | sourced by wrapper script (does not override gpuai-set vars) |
-| `/vault/secrets/lora-manager-settings.json` | LoraManager settings (JSON, contains `civitai_api_key`) | symlinked into `custom_nodes/ComfyUI-Lora-Manager/settings.json` |
+| `/vault/secrets/lora-manager-settings.json` | LoraManager settings (JSON: `civitai_api_key`, `example_images_path`, etc.) | copied to `~/.config/ComfyUI-LoRA-Manager/settings.json` by wrapper script |
 
 All vault files are optional — missing files are silently skipped so the image boots fine without them. The user creates and manages these files directly on the vault; they never enter git or the image.
 
