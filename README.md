@@ -18,12 +18,12 @@ docker buildx build --platform=linux/amd64 -t comfyui-gputw:local --load .
 
 The Dockerfile also pins `FROM --platform=linux/amd64` as a safety net, but the buildx command is the source of truth.
 
-Default ComfyUI version is `v0.27.0`. To pin a different release:
+Default ComfyUI version is `v0.30.0`. To pin a different release:
 
 ```bash
 docker buildx build --platform=linux/amd64 \
-    --build-arg COMFYUI_VERSION=v0.27.0 \
-    -t comfyui-gputw:v0.27.0 --load .
+    --build-arg COMFYUI_VERSION=v0.30.0 \
+    -t comfyui-gputw:v0.30.0 --load .
 ```
 
 See [ComfyUI releases](https://github.com/comfyanonymous/ComfyUI/releases) for available tags.
@@ -33,13 +33,13 @@ See [ComfyUI releases](https://github.com/comfyanonymous/ComfyUI/releases) for a
 ```bash
 # Docker Hub
 docker buildx build --platform=linux/amd64 \
-    --build-arg COMFYUI_VERSION=v0.27.0 \
-    -t docker.io/<your-user>/comfyui-gputw:v0.27.0 --push .
+    --build-arg COMFYUI_VERSION=v0.30.0 \
+    -t docker.io/<your-user>/comfyui-gputw:v0.30.0 --push .
 
 # GitHub Container Registry
 docker buildx build --platform=linux/amd64 \
-    --build-arg COMFYUI_VERSION=v0.27.0 \
-    -t ghcr.io/<your-user>/comfyui-gputw:v0.27.0 --push .
+    --build-arg COMFYUI_VERSION=v0.30.0 \
+    -t ghcr.io/<your-user>/comfyui-gputw:v0.30.0 --push .
 ```
 
 ## Run
@@ -196,7 +196,7 @@ with the baked-in `/opt/comfyui` layout and `extra_model_paths.yaml`.
 
 | Arg | Default | Description |
 | --- | --- | --- |
-| `COMFYUI_VERSION` | `v0.27.0` | ComfyUI release tag; downloaded as a zip |
+| `COMFYUI_VERSION` | `v0.30.0` | ComfyUI release tag; downloaded as a zip |
 | `PYTORCH_CUDA_TAG` | `cu128` | PyTorch wheel index suffix (e.g., `cu118`, `cu126`, `cu128`); the `nvidia/cuda` base image's CUDA version must be ≥ the one implied by this tag |
 | `COMFYUI_PORT` | `8080` | Sets the default listening port baked into the image. On gpuai this is fixed at build time (no runtime override). For local `docker run` you can still override via `-e COMFYUI_PORT=9090`. |
 | `COMFYUI_CPU` | `0` | When set to `1`, ComfyUI is launched with `--cpu` so the image can boot on a host without a GPU. On gpuai this is fixed at build time. For local `docker run` you can override via `-e COMFYUI_CPU=1`. |

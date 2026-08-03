@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       comfyui_version:
-        description: "ComfyUI release tag (e.g. v0.27.0)"
+        description: "ComfyUI release tag (e.g. v0.30.0)"
         required: false
-        default: "v0.27.0"
+        default: "v0.30.0"
         type: string
       pytorch_cuda_tag:
         description: "PyTorch CUDA tag (e.g. cu118, cu126, cu128)"
@@ -39,7 +39,7 @@ jobs:
         id: comfyui
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            # strip leading "v" from the git tag, e.g. v0.27.0 -> 0.27.0
+            # strip leading "v" from the git tag, e.g. v0.30.0 -> 0.30.0
             VERSION="${GITHUB_REF_NAME#v}"
             echo "comfyui_version=v${VERSION}" >> "$GITHUB_OUTPUT"
           else
