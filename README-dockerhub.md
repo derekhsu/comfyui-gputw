@@ -8,9 +8,9 @@ Container image for [ComfyUI](https://github.com/comfyanonymous/ComfyUI), optimi
 
 | Tag | Description |
 | --- | --- |
-| `custom-v0.27.0-cu128-pt2.11.0` | **Production** — pinned ComfyUI v0.27.0 + CUDA 12.8 + PyTorch 2.11.0, with 26 custom nodes |
+| `custom-v0.30.0-cu128-pt2.11.0` | **Production** — pinned ComfyUI v0.30.0 + CUDA 12.8 + PyTorch 2.11.0, with 26 custom nodes (MiniMax H3 native support) |
 | `custom-latest` | Rolling tag pointing to the newest custom build |
-| `v0.27.0-cu128-pt2.11.0` | Base image only (no custom nodes) |
+| `v0.30.0-cu128-pt2.11.0` | Base image only (no custom nodes) |
 | `latest` | Rolling tag for base image |
 
 **For production, use the pinned `custom-<version>` tag.** Use `custom-latest` for ad-hoc testing.
@@ -19,7 +19,7 @@ Container image for [ComfyUI](https://github.com/comfyanonymous/ComfyUI), optimi
 
 In the gpuai deploy form, set:
 
-- **Image**: `derekhsu/comfyui-gputw:custom-v0.27.0-cu128-pt2.11.0`
+- **Image**: `derekhsu/comfyui-gputw:custom-v0.30.0-cu128-pt2.11.0`
 - **Port**: `8080`
 
 The container listens on `0.0.0.0:8080`. No volume mounts needed — gpuai auto-mounts `/vault` for persistent storage.
