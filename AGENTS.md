@@ -139,7 +139,7 @@ Triggers: tag push (`v*`) and manual dispatch. Push to `main` does **not** auto-
 2. Commit and push to `main`
 3. Manually dispatch the workflow (push to main does not auto-trigger):
    ```
-   gh workflow run build.yml --ref main -f comfyui_version=v0.30.0 -f pytorch_cuda_tag=cu128 -f image_tag=dev
+   gh workflow run build.yml --ref main -f comfyui_version=v0.31.0 -f pytorch_cuda_tag=cu128 -f image_tag=dev
    ```
 4. Base job uses cache (~2min), gpuai custom job clones the new node (~2-4min depending on node deps)
 5. gpuai custom image appears at `derekhsu/comfyui-gputw:custom-dev`
