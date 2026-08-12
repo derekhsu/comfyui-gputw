@@ -1,7 +1,9 @@
 import importlib.util
+import io
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 
@@ -87,6 +89,78 @@ class ValidationTests(unittest.TestCase):
                 "/opt/comfyui",
             ],
         )
+
+
+class InstallTests(unittest.TestCase):
+    def preset(self):
+        return {
+            "version": 1,
+            "name": "install-example",
+            "models": [
+                {
+                    "name": "flux",
+                    "type": "diffusion_model",
+                    "source": {
+                        "provider": "huggingface",
+                        "repo_id": "org/repo",
+                        "filename": "nested/flux.safetensors",
+                    },
+                }
+            ],
+        }
+
+    def test_dry_run_prints_a_command_without_running_it(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as temporary:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                comfy_models.install_models(
+                    self.preset(),
+                    Path(temporary) / "models",
+                    dry_run=True,
+                    force=False,
+                    runner=calls.append,
+                )
+        self.assertEqual(calls, [])
+        self.assertIn("hf download org/repo nested/flux.safetensors", output.getvalue())
+
+    def test_existing_hugging_face_file_is_skipped_without_force(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as temporary:
+            models_dir = Path(temporary) / "models"
+            destination = models_dir / "diffusion_models" / "flux.safetensors"
+            destination.parent.mkdir(parents=True)
+            destination.touch()
+            comfy_models.install_models(
+                self.preset(),
+                models_dir,
+                dry_run=False,
+                force=False,
+                runner=calls.append,
+            )
+        self.assertEqual(calls, [])
+
+    def test_hugging_face_download_moves_staged_file_to_destination(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            models_dir = Path(temporary) / "models"
+
+            def runner(command):
+                staged_file = Path(command[-1]) / "nested" / "flux.safetensors"
+                staged_file.parent.mkdir(parents=True)
+                staged_file.write_text("model")
+
+            comfy_models.install_models(
+                self.preset(),
+                models_dir,
+                dry_run=False,
+                force=False,
+                runner=runner,
+            )
+            self.assertEqual(
+                (models_dir / "diffusion_models" / "flux.safetensors").read_text(),
+                "model",
+            )
+            self.assertFalse((models_dir / ".comfy-models-staging").exists())
 
 
 if __name__ == "__main__":

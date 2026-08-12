@@ -3,6 +3,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+import shutil
+import subprocess
+
+import yaml
 
 
 TYPE_DIRECTORIES = {
@@ -138,3 +142,66 @@ def plan_download(
         destination=None,
         staged_source=None,
     )
+
+
+def load_preset(path: Path | str) -> object:
+    try:
+        with Path(path).open(encoding="utf-8") as handle:
+            return yaml.safe_load(handle)
+    except OSError as error:
+        raise PresetError(f"cannot read preset: {error}") from error
+    except yaml.YAMLError as error:
+        raise PresetError(f"invalid YAML: {error}") from error
+
+
+def run_command(command: list[str]) -> None:
+    try:
+        subprocess.run(command, check=True)
+    except FileNotFoundError as error:
+        raise PresetError(f"required executable not found: {command[0]}") from error
+    except subprocess.CalledProcessError as error:
+        raise PresetError(
+            f"provider command failed ({error.returncode}): {' '.join(command)}"
+        ) from error
+
+
+def install_models(
+    preset: object,
+    models_dir: Path | str,
+    *,
+    dry_run: bool,
+    force: bool,
+    runner=run_command,
+) -> None:
+    models = validate_preset(preset)
+    models_dir = Path(models_dir)
+    staging_root = models_dir / ".comfy-models-staging"
+    plans: list[tuple[Model, DownloadPlan]] = []
+
+    for model in models:
+        staging_dir = staging_root / model.name if model.provider == "huggingface" else None
+        plan = plan_download(model, models_dir, staging_dir)
+        if plan.destination and plan.destination.exists() and not force:
+            print(f"skip {model.name}: {plan.destination} already exists")
+            continue
+        plans.append((model, plan))
+
+    if dry_run:
+        for model, plan in plans:
+            print(f"install {model.name}: {' '.join(plan.command)}")
+        return
+
+    try:
+        for model, plan in plans:
+            if plan.destination:
+                plan.destination.parent.mkdir(parents=True, exist_ok=True)
+            print(f"install {model.name}: {' '.join(plan.command)}")
+            runner(plan.command)
+            if plan.staged_source:
+                if not plan.staged_source.is_file():
+                    raise PresetError(
+                        f"downloaded file missing for {model.name}: {plan.staged_source}"
+                    )
+                shutil.move(str(plan.staged_source), str(plan.destination))
+    finally:
+        shutil.rmtree(staging_root, ignore_errors=True)
