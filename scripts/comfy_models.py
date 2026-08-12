@@ -70,6 +70,9 @@ def validate_model(raw: object, index: int) -> Model:
     if not isinstance(raw, dict):
         raise PresetError(f"models[{index}] must be a mapping")
     name = require_non_empty(raw.get("name"), f"models[{index}].name")
+    name_path = PurePosixPath(name)
+    if name_path.is_absolute() or "/" in name or ".." in name_path.parts:
+        raise PresetError("model name contains path traversal")
     model_type = require_non_empty(raw.get("type"), f"models[{index}].type")
     if model_type not in TYPE_DIRECTORIES:
         raise PresetError(f"unsupported model type: {model_type}")

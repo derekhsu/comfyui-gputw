@@ -41,6 +41,12 @@ class ValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(comfy_models.PresetError, "path traversal"):
             comfy_models.validate_preset(self.hf_preset("../secret.safetensors"))
 
+    def test_rejects_model_name_with_path_traversal(self):
+        preset = self.hf_preset()
+        preset["models"][0]["name"] = "../outside-models-dir"
+        with self.assertRaisesRegex(comfy_models.PresetError, "model name"):
+            comfy_models.validate_preset(preset)
+
     def test_hugging_face_plan_uses_a_staging_directory(self):
         model = comfy_models.validate_preset(self.hf_preset())[0]
         with tempfile.TemporaryDirectory() as temporary:
@@ -177,6 +183,16 @@ class CliTests(unittest.TestCase):
             [model.destination_directory for model in models],
             ["diffusion_models", "text_encoders", "vae"],
         )
+
+
+class ImageDefinitionTests(unittest.TestCase):
+    def test_vast_dockerfile_bundles_cli_and_presets(self):
+        dockerfile = (Path(__file__).parents[1] / "Dockerfile.vast").read_text()
+        self.assertIn("pip install --no-cache-dir pyyaml", dockerfile)
+        self.assertIn(
+            "COPY scripts/comfy_models.py /usr/local/bin/comfy-models", dockerfile
+        )
+        self.assertIn("COPY presets/ /opt/comfyui/presets/", dockerfile)
 
 
 if __name__ == "__main__":

@@ -60,6 +60,31 @@ on the vault are visible in the UI without copying them into the image.
 
 The container listens on `0.0.0.0:8080` so the gpuai orchestrator can reach it.
 
+### Vast.ai: install models from a preset
+
+The Vast.ai image (`derekhsu/comfyui-gputw:vast-<tag>`) includes the
+`comfy-models` command and bundled presets in `/opt/comfyui/presets/`. It
+downloads into `/opt/comfyui/models` by default, which is the image's default
+ComfyUI model root. No new environment variables are required: Hugging Face
+uses the existing `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN`; Civitai uses the
+existing Civitai token environment variables.
+
+```bash
+# Review all provider commands without downloading.
+comfy-models install --dry-run /opt/comfyui/presets/krea2-rtx3060.yaml
+
+# Download the Krea 2 RTX 3060 preset into /opt/comfyui/models.
+comfy-models install /opt/comfyui/presets/krea2-rtx3060.yaml
+
+# Use a user-supplied preset and another ComfyUI models directory.
+comfy-models install --models-dir /data/models /tmp/my-preset.yaml
+```
+
+Each preset explicitly maps Hugging Face files to ComfyUI model types, such as
+`diffusion_models`, `text_encoders`, and `vae`. Civitai presets use Civitai's
+ComfyUI layout, so `--models-dir` must end with `models` (for example,
+`/opt/comfyui/models` or `/data/models`).
+
 ### Secrets (API keys, tokens)
 
 ComfyUI and custom nodes need secrets (HuggingFace token, CivitAI API key).
