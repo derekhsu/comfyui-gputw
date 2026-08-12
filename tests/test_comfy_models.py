@@ -163,5 +163,21 @@ class InstallTests(unittest.TestCase):
             self.assertFalse((models_dir / ".comfy-models-staging").exists())
 
 
+class CliTests(unittest.TestCase):
+    def test_cli_defaults_to_comfyui_models_directory(self):
+        args = comfy_models.build_parser().parse_args(["install", "preset.yaml"])
+        self.assertEqual(args.models_dir, "/opt/comfyui/models")
+        self.assertFalse(args.dry_run)
+        self.assertFalse(args.force)
+
+    def test_krea_preset_has_the_three_required_types(self):
+        preset_path = Path(__file__).parents[1] / "presets" / "krea2-rtx3060.yaml"
+        models = comfy_models.validate_preset(comfy_models.load_preset(preset_path))
+        self.assertEqual(
+            [model.destination_directory for model in models],
+            ["diffusion_models", "text_encoders", "vae"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

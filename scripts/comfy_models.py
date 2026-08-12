@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
+import sys
 
 import yaml
 
@@ -205,3 +207,37 @@ def install_models(
                 shutil.move(str(plan.staged_source), str(plan.destination))
     finally:
         shutil.rmtree(staging_root, ignore_errors=True)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Install ComfyUI models from a YAML preset"
+    )
+    subcommands = parser.add_subparsers(dest="command", required=True)
+    install = subcommands.add_parser("install", help="install models declared by a preset")
+    install.add_argument("preset", help="path to a YAML preset")
+    install.add_argument(
+        "--models-dir", default="/opt/comfyui/models", help="ComfyUI models directory"
+    )
+    install.add_argument("--dry-run", action="store_true", help="print commands only")
+    install.add_argument("--force", action="store_true", help="redownload existing files")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        install_models(
+            load_preset(args.preset),
+            args.models_dir,
+            dry_run=args.dry_run,
+            force=args.force,
+        )
+    except PresetError as error:
+        print(f"comfy-models: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
