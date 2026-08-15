@@ -1,0 +1,24 @@
+version: 1
+name: krea2-rtx3060-wanvae
+
+models:
+  - name: krea2-turbo-int8-convrot
+    type: diffusion_model
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Krea-2
+      filename: diffusion_models/krea2_turbo_int8_convrot.safetensors
+
+  - name: qwen3vl-4b-bf16
+    type: text_encoder
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Krea-2
+      filename: text_encoders/qwen3vl_4b_bf16.safetensors
+
+  - name: wan-2.1-vae
+    type: vae
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Wan_2.1_ComfyUI_repackaged
+      filename: split_files/vae/wan_2.1_vae.safetensors

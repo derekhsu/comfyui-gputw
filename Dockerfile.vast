@@ -94,6 +94,13 @@ RUN chmod +x /usr/local/bin/comfy-models
 COPY entrypoint-wrapper.vast.sh /opt/entrypoint-wrapper.sh
 RUN chmod +x /opt/entrypoint-wrapper.sh
 
+# Directory for LoraManager example images. LoraManager's settings.json
+# (seeded from /data/secrets/lora-manager-settings.json by the wrapper when
+# a volume is mounted, or configured at runtime otherwise) can point
+# example_images_path here. The directory is empty at build time; populate
+# it manually after SSH (no-volume mode) or sync from /data (volume mode).
+RUN mkdir -p ${COMFYUI_HOME}/examples
+
 # Reset to ComfyUI home so the wrapper script runs in the right directory.
 WORKDIR ${COMFYUI_HOME}
 

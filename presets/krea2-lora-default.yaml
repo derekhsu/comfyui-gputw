@@ -1,0 +1,22 @@
+version: 1
+name: krea2-lora-default
+
+models:
+  - name: skindetails-krea2-loraholic
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: "3097834"
+
+  - name: detailer-krea2
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: "3068874"
+
+  - name: k2-bp-v2.0
+    type: lora
+    source:
+      provider: huggingface
+      repo_id: derekhsu/loras
+      filename: concept/krea2/k2_bp_v2.0.safetensors

@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       base_tag:
-        description: "Base image tag to build on (e.g. v0.31.0-cu128-pt<torch>, dev, latest)"
+        description: "Base image tag to build on (e.g. v0.33.1-cu128-pt<torch>, dev, latest)"
         required: true
         default: "latest"
         type: string

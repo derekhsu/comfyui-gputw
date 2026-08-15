@@ -60,19 +60,41 @@ for _v in $SECRETS_VARS; do
     fi
 done
 
-# 2. Seed LoraManager settings.json from volume (copy, not symlink).
-#    Lora Manager's default behavior reads from the user config dir
-#    (~/.config/ComfyUI-LoRA-Manager/settings.json on Linux) and writes
-#    auto-init content (folder_paths, env-var-overridden civitai_api_key)
-#    back to that file. Copying from the volume keeps the volume source
-#    clean while letting Lora Manager write freely to the ephemeral copy.
+# 2. Seed LoraManager settings.json.
+#    Volume mode: copy the user's complete settings from /data/secrets/
+#    (takes priority, user manages their own example_images_path there).
+#    No-volume mode: ensure example_images_path defaults to the
+#    /opt/comfyui/examples directory created at build time, so LoraManager
+#    picks it up without manual UI configuration. setdefault preserves any
+#    value the user set via the LoraManager UI on a previous run (container
+#    restart, not recreate).
 LORA_MANAGER_SRC="/data/secrets/lora-manager-settings.json"
 LORA_MANAGER_DST_DIR="${HOME}/.config/ComfyUI-LoRA-Manager"
 LORA_MANAGER_DST="${LORA_MANAGER_DST_DIR}/settings.json"
+LORA_MANAGER_DEFAULT_EXAMPLES="/opt/comfyui/examples"
 if [ -f "$LORA_MANAGER_SRC" ]; then
     echo "[entrypoint] Seeding LoraManager settings from /data/secrets/"
     mkdir -p "$LORA_MANAGER_DST_DIR"
     cp -f "$LORA_MANAGER_SRC" "$LORA_MANAGER_DST"
+else
+    echo "[entrypoint] Ensuring LoraManager example_images_path default"
+    mkdir -p "$LORA_MANAGER_DST_DIR"
+    LM_DST="$LORA_MANAGER_DST" LM_EXAMPLES="$LORA_MANAGER_DEFAULT_EXAMPLES" python3 -c '
+import json, os
+path = os.environ["LM_DST"]
+default = os.environ["LM_EXAMPLES"]
+data = {}
+if os.path.isfile(path):
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        data = {}
+if not data.get("example_images_path"):
+    data["example_images_path"] = default
+with open(path, "w") as f:
+    json.dump(data, f, indent=2)
+'
 fi
 
 # 3. Build the command to run.

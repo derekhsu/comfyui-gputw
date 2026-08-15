@@ -8,7 +8,7 @@ Container images for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that r
 
 - **Base** (`Dockerfile`) — ComfyUI core + PyTorch cu128. ~6.9 GB compressed. Generic, with no platform-specific assumptions.
 - **gpuai custom** (`Dockerfile.custom`) — layers custom nodes (`custom-nodes.txt`) + `extra_model_paths.yaml` on top of the base. Contains gpuai-specific `/vault` configuration.
-- **Vast.ai custom** (`Dockerfile.vast`) — layers the same custom nodes and the Civitai CLI on top of the base. Contains Vast.ai-specific `/data` configuration.
+- **Vast.ai custom** (`Dockerfile.vast`) — layers the same custom nodes and the Civitai CLI on top of the base. Contains Vast.ai-specific configuration that optionally reads from `/data` when a local volume is mounted (see "Vast.ai operation modes" below).
 
 ## Critical: platform deployment constraints
 
@@ -31,11 +31,30 @@ Implications for design decisions:
 ### Vast.ai
 
 - Use the `vast-<base_tag>` image variant, not the gpuai `custom-<base_tag>` variant.
-- Vast.ai storage volumes are local to one physical machine. The image therefore does not bake model paths into its configuration; download models at runtime with `hf download` or `civitai download`, or pass `--model-paths-config /path/to/config.yaml` through Vast.ai startup arguments when using a mounted volume.
-- The Vast.ai custom image reads optional persistent secrets from `/data/secrets/`, the default volume mount path.
-- Select Vast.ai's **docker ENTRYPOINT** launch mode. SSH and Jupyter launch modes replace the image entrypoint, so the wrapper cannot load secrets or assemble the default ComfyUI command.
+- The image does not bake model paths into its configuration. Download models at runtime with `comfy-models install`, `hf download`, or `civitai download` (see "Vast.ai operation modes" below for the two workflows).
+- The Vast.ai custom image optionally reads persistent secrets from `/data/secrets/` when a local volume is mounted at `/data`. Without a volume, secrets come solely from Vast.ai env vars.
+- Select Vast.ai's **docker ENTRYPOINT** launch mode. SSH and Jupyter launch modes replace the image entrypoint, so the wrapper cannot load secrets or assemble the default ComfyUI command. When using SSH mode, invoke `/opt/entrypoint-wrapper.sh` explicitly from the on-start script (see "Vast.ai SSH on-start script" below).
 - Environment variables configured in a Vast.ai account or template take priority over values in `/data/secrets/env.sh`.
 - The Vast.ai image includes `comfy-models`, a YAML-preset installer for models. It defaults to `/opt/comfyui/models`; use `--models-dir` only when a different ComfyUI models directory is required. It uses only the existing Hugging Face and Civitai credential environment variables.
+
+#### Vast.ai operation modes
+
+**No local volume (default workflow).** No Vast.ai volume is configured. `/data` does not exist in the container. All state is ephemeral container storage:
+
+- Secrets: set `HF_TOKEN`, `CIVITAI_API_KEY`, `CIVITAI_TOKEN`, etc. as Vast.ai account/template env vars. The wrapper's `/data/secrets/` sourcing is silently skipped.
+- Models: SSH in after boot and run `comfy-models install /opt/comfyui/presets/<preset>.yaml` (or `hf download` / `civitai download` directly) to populate `/opt/comfyui/models/`. Downloads repeat on every instance restart.
+- LoraManager settings: not seeded from volume; the wrapper writes a default `example_images_path` pointing to `/opt/comfyui/examples` so LoraManager picks it up without manual UI configuration. Other settings use LoraManager defaults or whatever the user configures at runtime.
+- Example images: `/opt/comfyui/examples/` exists (created at build time) but is empty; populate it manually after SSH if needed.
+
+**With local volume (optional).** A Vast.ai volume is created and mounted at `/data` (the Vast.ai default mount path). Persistent state survives instance restarts on the same physical machine:
+
+- Secrets: `/data/secrets/env.sh` and `/data/secrets/lora-manager-settings.json` are loaded by the wrapper (Vast.ai env vars still take priority).
+- Models: can be pre-downloaded into `/data/models/` and wired via `--model-paths-config /path/to/config.yaml` passed as a Vast.ai startup argument, or downloaded in-place with `comfy-models install --models-dir /data/models`.
+- Note: Vast.ai volumes are local to one physical machine and cannot migrate between machines.
+
+#### Vast.ai SSH on-start script
+
+When using SSH launch mode (which replaces the image ENTRYPOINT), the on-start script must invoke `/opt/entrypoint-wrapper.sh` explicitly so secrets are loaded and the CUDA env is set up. The wrapper appends any passed args to the default ComfyUI invocation (`python3 main.py --listen 0.0.0.0 --port $COMFYUI_PORT ...`). Run ComfyUI in the background with `nohup` so the SSH session stays available for manual model downloads.
 
 ## Secrets (API keys, tokens)
 
@@ -60,16 +79,16 @@ Secret var names currently tracked for priority handling (in `entrypoint-wrapper
 
 ### Vast.ai
 
-1. **Vast.ai account/template environment variables** (for example, `HF_TOKEN=hf_xxx`) — highest priority
-2. **`/data/secrets/` files** — fallback when a volume is mounted at `/data`
+1. **Vast.ai account/template environment variables** (for example, `HF_TOKEN=hf_xxx`) — highest priority, and the **only** source when no local volume is mounted
+2. **`/data/secrets/` files** — optional fallback, only available when a local volume is mounted at `/data`
 
 | Source | Purpose | How it's loaded |
 | --- | --- | --- |
 | Vast.ai account/template env vars | `HF_TOKEN`, `CIVITAI_API_KEY`, `CIVITAI_TOKEN`, etc. | injected at container start |
-| `/data/secrets/env.sh` | Shell env vars (fallback) | sourced by `entrypoint-wrapper.vast.sh` without overriding platform-provided values |
-| `/data/secrets/lora-manager-settings.json` | LoraManager settings JSON | copied to `~/.config/ComfyUI-LoRA-Manager/settings.json` by the wrapper |
+| `/data/secrets/env.sh` | Shell env vars (fallback, volume-only) | sourced by `entrypoint-wrapper.vast.sh` without overriding platform-provided values |
+| `/data/secrets/lora-manager-settings.json` | LoraManager settings JSON (fallback, volume-only) | copied to `~/.config/ComfyUI-LoRA-Manager/settings.json` by the wrapper |
 
-All `/data/secrets/` files are optional. The Vast.ai wrapper tracks `HF_TOKEN`, `HUGGING_FACE_HUB_TOKEN`, `CIVITAI_API_KEY`, and `CIVITAI_TOKEN` in `SECRETS_VARS`; add new secret variable names there when required.
+All `/data/secrets/` files are optional and silently skipped when `/data` does not exist (i.e. no volume mounted). In the default no-volume workflow, set all secrets as Vast.ai env vars. The Vast.ai wrapper tracks `HF_TOKEN`, `HUGGING_FACE_HUB_TOKEN`, `CIVITAI_API_KEY`, and `CIVITAI_TOKEN` in `SECRETS_VARS`; add new secret variable names there when required.
 
 ## Image architecture
 
@@ -139,7 +158,7 @@ Triggers: tag push (`v*`) and manual dispatch. Push to `main` does **not** auto-
 2. Commit and push to `main`
 3. Manually dispatch the workflow (push to main does not auto-trigger):
    ```
-   gh workflow run build.yml --ref main -f comfyui_version=v0.31.0 -f pytorch_cuda_tag=cu128 -f image_tag=dev
+   gh workflow run build.yml --ref main -f comfyui_version=v0.33.1 -f pytorch_cuda_tag=cu128 -f image_tag=dev
    ```
 4. Base job uses cache (~2min), gpuai custom job clones the new node (~2-4min depending on node deps)
 5. gpuai custom image appears at `derekhsu/comfyui-gputw:custom-dev`
