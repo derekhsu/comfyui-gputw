@@ -4,10 +4,11 @@
 
 ARG COMFYUI_VERSION=v0.33.1
 ARG PYTORCH_CUDA_TAG=cu128
+ARG CUDA_BASE_IMAGE=nvidia/cuda:12.8.0-runtime-ubuntu22.04
 ARG COMFYUI_PORT=8080
 ARG COMFYUI_CPU=0
 
-FROM --platform=linux/amd64 nvidia/cuda:12.8.0-runtime-ubuntu22.04
+FROM --platform=linux/amd64 ${CUDA_BASE_IMAGE}
 
 ARG COMFYUI_VERSION
 ARG PYTORCH_CUDA_TAG
@@ -40,6 +41,11 @@ RUN curl -fsSL -o comfyui.zip \
     && rm comfyui.zip
 
 WORKDIR ${COMFYUI_HOME}
+
+# Bundled workflows: baked into ComfyUI's DEFAULT user directory so they appear in the
+# UI workflow panel out of the box. Only visible when launched WITHOUT --user-directory
+# (vast.ai). GPUtw launches with --user-directory /vault/... and manages its own.
+COPY workflows/ ${COMFYUI_HOME}/user/default/workflows/
 
 # Install PyTorch first (${PYTORCH_CUDA_TAG} wheel) so ComfyUI's requirements.txt cannot downgrade it.
 RUN pip install --no-cache-dir \
