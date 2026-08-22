@@ -6,7 +6,7 @@ Project conventions for AI agents working on comfyui-gputw.
 
 Container images for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that run on the **gpuai** and **Vast.ai** GPU services. The base image is platform-neutral; each platform has its own custom layer:
 
-- **Base** (`Dockerfile`) — ComfyUI core + PyTorch. Supports three CUDA variants: `cu128` (CUDA 12.8, primary), `cu130` (CUDA 13.0), `cu132` (CUDA 13.2). ~6.9 GB compressed. Generic, with no platform-specific assumptions. The `nvidia/cuda` base image is selected at build time from `PYTORCH_CUDA_TAG` (or an explicit `CUDA_BASE_IMAGE` build arg).
+- **Base** (`Dockerfile`) — ComfyUI core + PyTorch. Supports three CUDA variants: `cu128` (CUDA 12.8, primary), `cu129` (CUDA 12.9), `cu130` (CUDA 13.0). ~6.9 GB compressed. Generic, with no platform-specific assumptions. The `nvidia/cuda` base image is selected at build time from `PYTORCH_CUDA_TAG` (or an explicit `CUDA_BASE_IMAGE` build arg).
 - **gpuai custom** (`Dockerfile.custom`) — layers custom nodes (`custom-nodes.txt`) + `extra_model_paths.yaml` on top of the base. Contains gpuai-specific `/vault` configuration.
 - **Vast.ai custom** (`Dockerfile.vast`) — layers the same custom nodes and the Civitai CLI on top of the base. Contains Vast.ai-specific configuration that optionally reads from `/data` when a local volume is mounted (see "Vast.ai operation modes" below).
 
@@ -112,7 +112,7 @@ Tag format breakdown (`v0.33.1-cu130-pt2.12.0`):
 | Segment | Meaning | Source |
 | --- | --- | --- |
 | `v0.33.1` | ComfyUI version | git tag or `comfyui_version` input |
-| `cu130` | PyTorch CUDA wheel tag | `pytorch_cuda_tag` input (`cu128`, `cu130`, `cu132`) |
+| `cu130` | PyTorch CUDA wheel tag | `pytorch_cuda_tag` input (`cu128`, `cu129`, `cu130`) |
 | `pt2.12.0` | PyTorch version | `torch.__version__` read from the built image |
 
 Supported CUDA variants and their `nvidia/cuda` base images:
@@ -120,8 +120,8 @@ Supported CUDA variants and their `nvidia/cuda` base images:
 | `PYTORCH_CUDA_TAG` | `nvidia/cuda` base | Trigger |
 | --- | --- | --- |
 | `cu128` (primary) | `12.8.0-runtime-ubuntu22.04` | tag push + manual dispatch |
+| `cu129` | `12.9.0-runtime-ubuntu22.04` | manual dispatch only |
 | `cu130` | `13.0.0-runtime-ubuntu22.04` | manual dispatch only |
-| `cu132` | `13.2.0-runtime-ubuntu22.04` | manual dispatch only |
 
 For production deployments, use the pinned `custom-<final_tag>` tag for reproducibility. Use `custom-latest-<cuda>` for ad-hoc/testing deployments that should track the newest release of a given CUDA variant.
 
@@ -169,9 +169,9 @@ Triggers: tag push (`v*`) and manual dispatch. Push to `main` does **not** auto-
    ```
    # cu128 (primary)
    gh workflow run build.yml --ref main -f comfyui_version=v0.33.1 -f pytorch_cuda_tag=cu128 -f image_tag=dev
-   # cu130 / cu132 (manual dispatch only; repeat per variant)
+   # cu129 / cu130 (manual dispatch only; repeat per variant)
+   gh workflow run build.yml --ref main -f comfyui_version=v0.33.1 -f pytorch_cuda_tag=cu129 -f image_tag=dev
    gh workflow run build.yml --ref main -f comfyui_version=v0.33.1 -f pytorch_cuda_tag=cu130 -f image_tag=dev
-   gh workflow run build.yml --ref main -f comfyui_version=v0.33.1 -f pytorch_cuda_tag=cu132 -f image_tag=dev
    ```
 4. Base job uses cache (~2min), gpuai custom job clones the new node (~2-4min depending on node deps)
 5. gpuai custom image appears at `derekhsu/comfyui-gputw:custom-dev`
