@@ -1,0 +1,10 @@
+version: 1
+name: pornmaster-krea2-v25turbo-int8
+
+models:
+  - name: pornmaster-krea2-v25turbo-int8
+    type: diffusion_model
+    source:
+      provider: civitai
+      model_version_id: 3171380
+      file: 3051927

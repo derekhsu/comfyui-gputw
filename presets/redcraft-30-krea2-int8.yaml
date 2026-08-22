@@ -1,0 +1,10 @@
+version: 1
+name: redcraft-30-krea2-int8
+
+models:
+  - name: redcraft-redmix-30-krea2-int8
+    type: diffusion_model
+    source:
+      provider: civitai
+      model_version_id: 3139241
+      file: 3019607

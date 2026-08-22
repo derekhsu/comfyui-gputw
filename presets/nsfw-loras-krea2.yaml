@@ -1,0 +1,45 @@
+version: 1
+name: nsfw-loras-krea2
+
+models:
+  - name: krea2-nsfw-v4-v43-exp
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: 3147117
+
+  - name: snofs-krea2-v13d
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: 3220691
+
+  - name: pubic-hair-slider-krea2-zit
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: 3136749
+
+  - name: innie-labia-minora-slider-krea2
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: 3170393
+
+  - name: breast-size-slider-krea2-zit
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: 3131773
+
+  - name: mystic-xxx-krea2-v30
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: 3116175
+
+  - name: krea2-better-pussy-v41
+    type: lora
+    source:
+      provider: civitai
+      model_version_id: 3111211

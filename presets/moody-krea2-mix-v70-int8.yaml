@@ -1,0 +1,10 @@
+version: 1
+name: moody-krea2-mix-v70-int8
+
+models:
+  - name: moody-krea2-mix-v70-int8
+    type: diffusion_model
+    source:
+      provider: civitai
+      model_version_id: 3209007
+      file: 3090690

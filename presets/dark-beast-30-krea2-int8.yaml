@@ -1,0 +1,10 @@
+version: 1
+name: dark-beast-30-krea2-int8
+
+models:
+  - name: dark-beast-30-krea2-int8
+    type: diffusion_model
+    source:
+      provider: civitai
+      model_version_id: 3173268
+      file: 3053854

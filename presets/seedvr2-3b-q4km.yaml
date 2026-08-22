@@ -1,0 +1,17 @@
+version: 1
+name: seedvr2-3b-q4km
+
+models:
+  - name: seedvr2-ema-3b-q4-k-m
+    type: seedvr2
+    source:
+      provider: huggingface
+      repo_id: cmeka/SeedVR2-GGUF
+      filename: seedvr2_ema_3b-Q4_K_M.gguf
+
+  - name: seedvr2-ema-vae-fp16
+    type: seedvr2
+    source:
+      provider: huggingface
+      repo_id: numz/SeedVR2_comfyUI
+      filename: ema_vae_fp16.safetensors

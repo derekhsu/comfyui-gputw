@@ -1,0 +1,10 @@
+version: 1
+name: moody-cutie-mix-krea2-v40-int8
+
+models:
+  - name: moody-cutie-mix-krea2-v40-int8
+    type: diffusion_model
+    source:
+      provider: civitai
+      model_version_id: 3211049
+      file: 3092829
