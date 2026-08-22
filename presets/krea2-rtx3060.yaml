@@ -9,12 +9,12 @@ models:
       repo_id: Comfy-Org/Krea-2
       filename: diffusion_models/krea2_turbo_int8_convrot.safetensors
 
-  - name: qwen3vl-4b-bf16
+  - name: qwen3vl-4b-int8-convrot
     type: text_encoder
     source:
       provider: huggingface
-      repo_id: Comfy-Org/Krea-2
-      filename: text_encoders/qwen3vl_4b_bf16.safetensors
+      repo_id: Merserk/qwen3vl-4b-int8-convrot
+      filename: qwen3vl_4b_int8_convrot.safetensors
 
   - name: qwen-image-vae
     type: vae
