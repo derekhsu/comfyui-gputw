@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "comfy_models.py"
@@ -167,6 +168,48 @@ class InstallTests(unittest.TestCase):
                 "model",
             )
             self.assertFalse((models_dir / ".comfy-models-staging").exists())
+
+
+class EnvironmentTests(unittest.TestCase):
+    def test_provider_environment_imports_missing_pid1_secrets(self):
+        with tempfile.NamedTemporaryFile() as environ_file:
+            environ_file.write(
+                b"HF_TOKEN=hf-from-pid1\0CIVITAI_API_KEY=civitai-from-pid1\0"
+            )
+            environ_file.flush()
+            with patch.object(comfy_models, "PID1_ENVIRON", Path(environ_file.name)):
+                with patch.dict(comfy_models.os.environ, {}, clear=True):
+                    environment = comfy_models.provider_environment()
+
+        self.assertEqual(environment["HF_TOKEN"], "hf-from-pid1")
+        self.assertEqual(environment["CIVITAI_API_KEY"], "civitai-from-pid1")
+        self.assertEqual(environment["CIVITAI_TOKEN"], "civitai-from-pid1")
+
+    def test_provider_environment_preserves_explicit_values(self):
+        with tempfile.NamedTemporaryFile() as environ_file:
+            environ_file.write(b"HF_TOKEN=from-pid1\0")
+            environ_file.flush()
+            with patch.object(comfy_models, "PID1_ENVIRON", Path(environ_file.name)):
+                with patch.dict(
+                    comfy_models.os.environ, {"HF_TOKEN": "from-shell"}, clear=True
+                ):
+                    environment = comfy_models.provider_environment()
+
+        self.assertEqual(environment["HF_TOKEN"], "from-shell")
+
+    def test_run_command_passes_provider_environment(self):
+        with patch.object(
+            comfy_models,
+            "provider_environment",
+            return_value={"HF_TOKEN": "secret"},
+        ) as provider_env:
+            with patch.object(comfy_models.subprocess, "run") as run:
+                comfy_models.run_command(["hf", "download"])
+
+        provider_env.assert_called_once_with()
+        run.assert_called_once_with(
+            ["hf", "download"], check=True, env={"HF_TOKEN": "secret"}
+        )
 
 
 class CliTests(unittest.TestCase):
