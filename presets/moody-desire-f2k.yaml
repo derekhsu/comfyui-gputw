@@ -1,0 +1,26 @@
+version: 1
+name: moody-desire-f2k
+
+# Flux.2 Klein 9B NSFW edit (Goon's F2K I2I workflow) 完整三件套。
+# Moody Desire v3.0 = Klein 9B 微調 checkpoint。3090 適用：fp8。
+models:
+  - name: moody-desire-v3-fp8
+    type: diffusion_model
+    source:
+      provider: huggingface
+      repo_id: catlover1937/moody-desire-mix
+      filename: moody-desire-v3_00002__fp8.safetensors
+
+  - name: qwen-3-8b-fp8
+    type: text_encoder
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/vae-text-encorder-for-flux-klein-9b
+      filename: split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors
+
+  - name: flux2-vae
+    type: vae
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/flux2-dev
+      filename: split_files/vae/flux2-vae.safetensors
