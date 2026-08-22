@@ -8,18 +8,22 @@ Container image for [ComfyUI](https://github.com/comfyanonymous/ComfyUI), optimi
 
 | Tag | Description |
 | --- | --- |
-| `custom-v0.30.0-cu128-pt2.11.0` | **Production** — pinned ComfyUI v0.30.0 + CUDA 12.8 + PyTorch 2.11.0, with 26 custom nodes (MiniMax H3 native support) |
-| `custom-latest` | Rolling tag pointing to the newest custom build |
-| `v0.30.0-cu128-pt2.11.0` | Base image only (no custom nodes) |
-| `latest` | Rolling tag for base image |
+| `custom-v0.33.1-cu128-pt2.11.0` | **Production** — pinned ComfyUI v0.33.1 + CUDA 12.8 + PyTorch 2.11.0, with 26 custom nodes |
+| `custom-latest-cu128` | Rolling tag for the newest cu128 custom build |
+| `custom-latest-cu130` | Rolling tag for the newest cu130 custom build |
+| `custom-latest-cu132` | Rolling tag for the newest cu132 custom build |
+| `v0.33.1-cu128-pt2.11.0` | Base image only (no custom nodes), cu128 |
+| `latest-cu128` / `latest-cu130` / `latest-cu132` | Rolling base tag per CUDA variant |
+| `vast-<base_tag>` | Vast.ai custom image (Civitai CLI bundled) |
+| `vast-latest-cu128` / `vast-latest-cu130` / `vast-latest-cu132` | Rolling Vast.ai tag per CUDA variant |
 
-**For production, use the pinned `custom-<version>` tag.** Use `custom-latest` for ad-hoc testing.
+**For production, use the pinned `custom-<version>` tag.** Use `custom-latest-<cuda>` for ad-hoc testing of a specific CUDA variant.
 
 ## Quick start on gpuai
 
 In the gpuai deploy form, set:
 
-- **Image**: `derekhsu/comfyui-gputw:custom-v0.30.0-cu128-pt2.11.0`
+- **Image**: `derekhsu/comfyui-gputw:custom-v0.33.1-cu128-pt2.11.0`
 - **Port**: `8080`
 
 The container listens on `0.0.0.0:8080`. No volume mounts needed — gpuai auto-mounts `/vault` for persistent storage.
@@ -62,10 +66,10 @@ The custom image includes 26 popular custom nodes (ComfyUI-Manager, Impact-Pack,
 
 ```bash
 # With GPU
-docker run --gpus all -p 8080:8080 derekhsu/comfyui-gputw:custom-latest
+docker run --gpus all -p 8080:8080 derekhsu/comfyui-gputw:custom-latest-cu128
 
 # CPU-only smoke test (very slow, not for inference)
-docker run -e COMFYUI_CPU=1 -p 8080:8080 derekhsu/comfyui-gputw:custom-latest
+docker run -e COMFYUI_CPU=1 -p 8080:8080 derekhsu/comfyui-gputw:custom-latest-cu128
 ```
 
 UI at <http://localhost:8080>.

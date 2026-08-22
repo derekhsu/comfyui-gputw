@@ -26,6 +26,15 @@ docker buildx build --platform=linux/amd64 \
     -t comfyui-gputw:v0.33.1 --load .
 ```
 
+To build with a different CUDA variant (default `cu128`; also supported: `cu130`, `cu132`):
+
+```bash
+docker buildx build --platform=linux/amd64 \
+    --build-arg PYTORCH_CUDA_TAG=cu130 \
+    --build-arg CUDA_BASE_IMAGE=nvidia/cuda:13.0.0-runtime-ubuntu22.04 \
+    -t comfyui-gputw:v0.33.1-cu130 --load .
+```
+
 See [ComfyUI releases](https://github.com/comfyanonymous/ComfyUI/releases) for available tags.
 
 ## Push to a registry
@@ -222,7 +231,8 @@ with the baked-in `/opt/comfyui` layout and `extra_model_paths.yaml`.
 | Arg | Default | Description |
 | --- | --- | --- |
 | `COMFYUI_VERSION` | `v0.33.1` | ComfyUI release tag; downloaded as a zip |
-| `PYTORCH_CUDA_TAG` | `cu128` | PyTorch wheel index suffix (e.g., `cu118`, `cu126`, `cu128`); the `nvidia/cuda` base image's CUDA version must be ≥ the one implied by this tag |
+| `PYTORCH_CUDA_TAG` | `cu128` | PyTorch wheel index suffix. Supported: `cu128`, `cu130`, `cu132`. CI auto-derives the matching `nvidia/cuda` base image from this tag. |
+| `CUDA_BASE_IMAGE` | `nvidia/cuda:12.8.0-runtime-ubuntu22.04` | `nvidia/cuda` base image. CI derives this from `PYTORCH_CUDA_TAG` (`cu128`→12.8.0, `cu130`→13.0.0, `cu132`→13.2.0); override only for custom bases. |
 | `COMFYUI_PORT` | `8080` | Sets the default listening port baked into the image. On gpuai this is fixed at build time (no runtime override). For local `docker run` you can still override via `-e COMFYUI_PORT=9090`. |
 | `COMFYUI_CPU` | `0` | When set to `1`, ComfyUI is launched with `--cpu` so the image can boot on a host without a GPU. On gpuai this is fixed at build time. For local `docker run` you can override via `-e COMFYUI_CPU=1`. |
 
@@ -239,10 +249,10 @@ This Dockerfile is provided as-is. ComfyUI itself is licensed under GPL-3.0.
 
 Triggers:
 
-- **Tag push** (`v*`): e.g. `git tag v0.33.1 && git push --tags` → base `:v0.33.1-cu128-pt<torch>` + `:latest`, custom `:custom-v0.33.1-cu128-pt<torch>` + `:custom-latest` (the `pt*` suffix is read from the actually-installed torch at build time)
-- **Manual dispatch**: Actions tab → Run workflow, with optional `comfyui_version`, `pytorch_cuda_tag`, and `image_tag` inputs. Leave `image_tag` empty for auto-generated version tags (also gets `latest`/`custom-latest`); set it to `dev` for a floating dev tag (no `latest` alias).
+- **Tag push** (`v*`): e.g. `git tag v0.33.1 && git push --tags` → builds the **cu128** (primary) variant only: base `:v0.33.1-cu128-pt<torch>` + `:latest-cu128`, custom `:custom-v0.33.1-cu128-pt<torch>` + `:custom-latest-cu128` (the `pt*` suffix is read from the actually-installed torch at build time)
+- **Manual dispatch**: Actions tab → Run workflow, with `comfyui_version`, `pytorch_cuda_tag` (cu128/cu130/cu132), optional `cuda_base_image`, and `image_tag` inputs. Leave `image_tag` empty for auto-generated version tags (also gets `latest-<cuda>`/`custom-latest-<cuda>`); set it to `dev` for a floating dev tag (no `latest` alias). To publish all three CUDA variants, dispatch once per `pytorch_cuda_tag`.
 
-Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.33.1-cu128-pt<torch>`. Custom image tags are `custom-` + the base tag. This lets gpuai pin to a specific ComfyUI + CUDA + PyTorch combination. For production, deploy the pinned `custom-<version>` tag; for ad-hoc testing, use `custom-latest`.
+Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.33.1-cu130-pt2.12.0`. Custom image tags are `custom-` + the base tag; Vast.ai tags are `vast-` + the base tag. Each CUDA variant gets its own rolling alias: `latest-cu128`/`latest-cu130`/`latest-cu132`, `custom-latest-<cuda>`, `vast-latest-<cuda>`. For production, deploy the pinned `custom-<version>` tag; for ad-hoc testing, use `custom-latest-<cuda>`.
 
 ### Adding custom nodes
 
