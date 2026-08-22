@@ -12,9 +12,14 @@ on:
         default: "v0.33.1"
         type: string
       pytorch_cuda_tag:
-        description: "PyTorch CUDA tag (e.g. cu118, cu126, cu128)"
+        description: "PyTorch CUDA tag (cu128, cu130, cu132)"
         required: false
         default: "cu128"
+        type: string
+      cuda_base_image:
+        description: "nvidia/cuda base image (auto-derived from pytorch_cuda_tag if empty)"
+        required: false
+        default: ""
         type: string
       image_tag:
         description: "Override image tag (default: v<comfyui>-<cuda_tag>-pt<torch> for tag push, 'dev' for manual)"
@@ -54,8 +59,20 @@ jobs:
           COMFYUI_VERSION="${{ steps.comfyui.outputs.comfyui_version }}"
           PYTORCH_CUDA_TAG="${PYTORCH_CUDA_TAG:-${{ inputs.pytorch_cuda_tag }}}"
           PYTORCH_CUDA_TAG="${PYTORCH_CUDA_TAG:-cu128}"
+          # Map PYTORCH_CUDA_TAG -> nvidia/cuda base image. Explicit
+          # cuda_base_image input wins; otherwise derive from the tag.
+          CUDA_BASE_IMAGE="${{ inputs.cuda_base_image }}"
+          if [ -z "$CUDA_BASE_IMAGE" ]; then
+            case "$PYTORCH_CUDA_TAG" in
+              cu128) CUDA_BASE_IMAGE="nvidia/cuda:12.8.0-runtime-ubuntu22.04" ;;
+              cu130) CUDA_BASE_IMAGE="nvidia/cuda:13.0.0-runtime-ubuntu22.04" ;;
+              cu132) CUDA_BASE_IMAGE="nvidia/cuda:13.2.0-runtime-ubuntu22.04" ;;
+              *) echo "Unsupported pytorch_cuda_tag: $PYTORCH_CUDA_TAG" >&2; exit 1 ;;
+            esac
+          fi
           echo "pytorch_cuda_tag=${PYTORCH_CUDA_TAG}" >> "$GITHUB_OUTPUT"
-          echo "computed comfyui_version=${COMFYUI_VERSION} pytorch_cuda_tag=${PYTORCH_CUDA_TAG}"
+          echo "cuda_base_image=${CUDA_BASE_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "computed comfyui_version=${COMFYUI_VERSION} pytorch_cuda_tag=${PYTORCH_CUDA_TAG} cuda_base_image=${CUDA_BASE_IMAGE}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -78,15 +95,15 @@ jobs:
           build-args: |
             COMFYUI_VERSION=${{ steps.comfyui.outputs.comfyui_version }}
             PYTORCH_CUDA_TAG=${{ steps.args.outputs.pytorch_cuda_tag }}
-          # layer cache: read from GHA backend (scoped to the trigger) and also
-          # fall back to the public tag on the registry so cold starts still hit
-          # a usable cache after a long gap. Write back in `min` mode to keep
-          # the GHA cache size bounded (the heavy layers are PyTorch and
-          # ComfyUI's pip tree, both stable across most rebuilds).
+            CUDA_BASE_IMAGE=${{ steps.args.outputs.cuda_base_image }}
+          # layer cache: scoped per CUDA variant so cu128/cu130/cu132 builds
+          # don't evict each other. Fall back to the public registry buildcache
+          # tag so cold starts still hit a usable cache after a long gap.
+          # Write back in `min` mode to keep GHA cache size bounded.
           cache-from: |
-            type=gha,scope=${{ github.workflow }}-${{ github.ref_name }}
-            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=gha,scope=${{ github.workflow }}-${{ github.ref_name }},mode=min
+            type=gha,scope=${{ github.workflow }}-${{ github.ref_name }}-${{ steps.args.outputs.pytorch_cuda_tag }}
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-${{ steps.args.outputs.pytorch_cuda_tag }}
+          cache-to: type=gha,scope=${{ github.workflow }}-${{ github.ref_name }}-${{ steps.args.outputs.pytorch_cuda_tag }},mode=min
           provenance: false
 
       - name: Read installed PyTorch version
@@ -115,15 +132,20 @@ jobs:
             FINAL_TAG="v${COMFYUI_VERSION_NO_V}-${{ steps.args.outputs.pytorch_cuda_tag }}-pt${PYTORCH_NO_DOTS}"
           fi
           echo "Tagging as ${FINAL_TAG}"
+          # Per-CUDA latest alias (latest-cu128, latest-cu130, latest-cu132)
+          # instead of a single `latest` — each CUDA variant gets its own
+          # rolling tag so users can pin by CUDA major version.
+          CUDA_TAG="${{ steps.args.outputs.pytorch_cuda_tag }}"
           docker buildx imagetools create \
             -t "${{ env.IMAGE_NAME }}:${FINAL_TAG}" \
-            -t "${{ env.IMAGE_NAME }}:latest" \
+            -t "${{ env.IMAGE_NAME }}:latest-${CUDA_TAG}" \
             "${{ env.IMAGE_NAME }}:placeholder"
           docker buildx imagetools rm "${{ env.IMAGE_NAME }}:placeholder" 2>&1 || true
           echo "final_tag=${FINAL_TAG}" >> "$GITHUB_OUTPUT"
 
     outputs:
       final_tag: ${{ steps.tag.outputs.final_tag }}
+      pytorch_cuda_tag: ${{ steps.args.outputs.pytorch_cuda_tag }}
 
   build-custom:
     needs: build
@@ -156,15 +178,17 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ needs.build.outputs.final_tag }}
           # Separate cache scope from the base image so custom-node rebuilds
-          # do not evict base layers and vice versa.
-          cache-from: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }}
-          cache-to: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }},mode=min
+          # do not evict base layers and vice versa. Scope per CUDA variant
+          # so cu128/cu130/cu132 custom builds don't evict each other.
+          cache-from: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }}-${{ needs.build.outputs.pytorch_cuda_tag }}
+          cache-to: type=gha,scope=${{ github.workflow }}-custom-${{ github.ref_name }}-${{ needs.build.outputs.pytorch_cuda_tag }},mode=min
           provenance: false
 
       - name: Tag custom-latest (versioned builds only)
         if: ${{ !inputs.image_tag }}
         run: |
+          CUDA_TAG="${{ needs.build.outputs.pytorch_cuda_tag }}"
           docker buildx imagetools create \
-            -t "${{ env.IMAGE_NAME }}:custom-latest" \
+            -t "${{ env.IMAGE_NAME }}:custom-latest-${CUDA_TAG}" \
             "${{ env.IMAGE_NAME }}:custom-${{ needs.build.outputs.final_tag }}"
-          echo "Also tagged custom-latest -> custom-${{ needs.build.outputs.final_tag }}"
+          echo "Also tagged custom-latest-${CUDA_TAG} -> custom-${{ needs.build.outputs.final_tag }}"

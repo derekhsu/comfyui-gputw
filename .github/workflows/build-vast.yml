@@ -12,6 +12,8 @@ name: build-vast
 #   - Always uses the same custom-nodes.txt as the gpuai variant.
 #   - Adds the Civitai CLI for runtime model downloads.
 #   - Reads secrets from /data/secrets/ (vast.ai volume mount path).
+#   - Per-CUDA vast-latest alias (vast-latest-cu128, vast-latest-cu130, ...)
+#     is created when base_tag is a versioned tag containing a cuXXX segment.
 
 on:
   workflow_dispatch:
@@ -55,8 +57,12 @@ jobs:
           else
             FINAL_TAG="vast-${BASE_TAG}"
           fi
+          # Extract CUDA tag from base_tag (e.g. v0.33.1-cu130-pt2.12.0 -> cu130)
+          # for per-CUDA vast-latest alias. Falls back to empty for dev/latest.
+          CUDA_TAG=$(echo "${BASE_TAG}" | grep -oE 'cu[0-9]+' | head -1 || true)
           echo "final_tag=${FINAL_TAG}" >> "$GITHUB_OUTPUT"
-          echo "Building ${IMAGE_NAME}:${FINAL_TAG} from base ${BASE_TAG}"
+          echo "cuda_tag=${CUDA_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Building ${IMAGE_NAME}:${FINAL_TAG} from base ${BASE_TAG} (cuda=${CUDA_TAG})"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -79,15 +85,18 @@ jobs:
             BASE_IMAGE=${{ env.IMAGE_NAME }}:${{ inputs.base_tag }}
             CIVITAI_CLI_VERSION=${{ inputs.civitai_cli_version }}
           # Separate cache scope from base + gpuai custom so vast rebuilds
-          # do not evict their layers and vice versa.
-          cache-from: type=gha,scope=${{ github.workflow }}-${{ github.ref_name }}
-          cache-to: type=gha,scope=${{ github.workflow }}-${{ github.ref_name }},mode=min
+          # do not evict their layers and vice versa. Scope per CUDA variant
+          # when extractable from base_tag so cu128/cu130/cu132 vast builds
+          # don't evict each other.
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ github.ref_name }}-${{ steps.tag.outputs.cuda_tag }}
+          cache-to: type=gha,scope=${{ github.workflow }}-${{ github.ref_name }}-${{ steps.tag.outputs.cuda_tag }},mode=min
           provenance: false
 
       - name: Tag vast-latest (when building from a versioned base)
-        if: ${{ !inputs.image_tag_suffix && inputs.base_tag != 'dev' && inputs.base_tag != 'latest' }}
+        if: ${{ !inputs.image_tag_suffix && inputs.base_tag != 'dev' && inputs.base_tag != 'latest' && steps.tag.outputs.cuda_tag != '' }}
         run: |
+          CUDA_TAG="${{ steps.tag.outputs.cuda_tag }}"
           docker buildx imagetools create \
-            -t "${{ env.IMAGE_NAME }}:vast-latest" \
+            -t "${{ env.IMAGE_NAME }}:vast-latest-${CUDA_TAG}" \
             "${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.final_tag }}"
-          echo "Also tagged vast-latest -> ${{ steps.tag.outputs.final_tag }}"
+          echo "Also tagged vast-latest-${CUDA_TAG} -> ${{ steps.tag.outputs.final_tag }}"
