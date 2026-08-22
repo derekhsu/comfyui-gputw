@@ -1,0 +1,11 @@
+version: 1
+name: krea2-identity-edit-lora
+
+# 輕量版：僅 Identity Edit LoRA，給已裝 krea2-rtx3060-wanvae（turbo+TE+VAE）基礎的機器補裝用
+models:
+  - name: krea2-identity-edit-v1_2
+    type: lora
+    source:
+      provider: huggingface
+      repo_id: conradlocke/krea2-identity-edit
+      filename: krea2_identity_edit_v1_2.safetensors

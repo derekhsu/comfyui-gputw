@@ -1,0 +1,33 @@
+version: 1
+name: krea2-identity-edit-full
+
+# 完整 Identity Edit 功能（全新機器一鍵）：Raw int8（移除類編輯 CFG3）+ int8 text encoder + wan VAE + Identity Edit LoRA
+# RTX 3090 適用：raw_bf16 為 26.28GB 超過 24GB VRAM，故選 raw_int8_convrot（13.49GB）
+models:
+  - name: krea2-raw-int8-convrot
+    type: diffusion_model
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Krea-2
+      filename: diffusion_models/krea2_raw_int8_convrot.safetensors
+
+  - name: qwen3vl-4b-int8-convrot
+    type: text_encoder
+    source:
+      provider: huggingface
+      repo_id: Merserk/qwen3vl-4b-int8-convrot
+      filename: qwen3vl_4b_int8_convrot.safetensors
+
+  - name: wan-2.1-vae
+    type: vae
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Wan_2.1_ComfyUI_repackaged
+      filename: split_files/vae/wan_2.1_vae.safetensors
+
+  - name: krea2-identity-edit-v1_2
+    type: lora
+    source:
+      provider: huggingface
+      repo_id: conradlocke/krea2-identity-edit
+      filename: krea2_identity_edit_v1_2.safetensors
