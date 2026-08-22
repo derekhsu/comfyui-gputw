@@ -34,3 +34,4 @@ https://github.com/rgthree/rgthree-comfy
 https://github.com/ChangeTheConstants/SeedVarianceEnhancer
 https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler
 https://github.com/WASasquatch/was-node-suite-comfyui
+https://github.com/lbouaraba/comfyui-krea2edit
