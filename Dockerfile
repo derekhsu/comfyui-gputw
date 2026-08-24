@@ -25,8 +25,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # OS deps: python3 (Ubuntu 22.04 ships 3.10), libgl/libsm/libxext for Pillow/OpenCV,
 # ffmpeg for video custom nodes (e.g. VideoHelperSuite), unzip for fetching ComfyUI.
+# gcc + python3-dev: required by Triton JIT at runtime (torch 2.13 _native dispatch
+# compiles kernels on first use; missing compiler fails inference).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3 python3-pip python3-venv \
+        python3 python3-pip python3-venv python3-dev \
+        gcc \
         ca-certificates curl wget git unzip \
         libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
         ffmpeg \
