@@ -66,7 +66,7 @@ RUN if [ -n "${TORCH_VERSION}" ]; then \
         pip install --no-cache-dir torch \
             --index-url "https://download.pytorch.org/whl/${PYTORCH_CUDA_TAG}"; \
     fi \
-    && pip install --no-cache-dir ninja wheel
+    && pip install --no-cache-dir ninja wheel packaging
 
 RUN git clone --depth 1 --branch "${SAGEATTENTION_REF}" \
         https://github.com/thu-ml/SageAttention.git /tmp/SageAttention \
