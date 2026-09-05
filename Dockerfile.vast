@@ -44,7 +44,10 @@ ARG CUDA_DEVEL_IMAGE=nvidia/cuda:13.0.0-devel-ubuntu22.04
 # Builder: compile the SageAttention wheel. The runtime base has no nvcc,
 # so build here with the devel image. TORCH_CUDA_ARCH_LIST="12.0" targets
 # Blackwell (sm_120) and lets setup.py run without a GPU (CI-safe).
-# MAX_JOBS=4 keeps nvcc memory usage inside a 4-vCPU GHA runner.
+# Parallelism is kept LOW on purpose: GHA runners have 16 GB RAM and the
+# fp8 sm89 TUs need ~2-3 GB each; EXT_PARALLEL=1 + MAX_JOBS=2 + nvcc
+# --threads=2 peaks around 6 GB. Higher values get OOM-killed mid-build
+# (seen on the 2026-09-05 run: silent death after ~12 min of compile).
 FROM ${CUDA_DEVEL_IMAGE} AS sage-builder
 
 ARG SAGEATTENTION_REF
@@ -71,8 +74,8 @@ RUN if [ -n "${TORCH_VERSION}" ]; then \
 RUN git clone --depth 1 --branch "${SAGEATTENTION_REF}" \
         https://github.com/thu-ml/SageAttention.git /tmp/SageAttention \
     && cd /tmp/SageAttention \
-    && CXX_APPEND_FLAGS="-std=c++20" NVCC_APPEND_FLAGS="-std=c++20" \
-        TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=4 EXT_PARALLEL=4 \
+    && CXX_APPEND_FLAGS="-std=c++20" NVCC_APPEND_FLAGS="-std=c++20 --threads=2" \
+        TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=2 EXT_PARALLEL=1 \
         python3 setup.py bdist_wheel \
     && mkdir -p /sage-wheels && cp dist/*.whl /sage-wheels/ \
     && ls -la /sage-wheels/
