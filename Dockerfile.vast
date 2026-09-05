@@ -11,6 +11,12 @@
 #     pass --model-paths-config /path/to/their.yaml via vast.ai --args.
 #   - Civitai CLI is installed (single static Go binary) so users can
 #     download Civitai models without extra setup.
+#   - SageAttention 2.2.0 is built from source (sm_120 kernels for RTX
+#     5090/Blackwell) plus comfy-kitchen for NVFP4/FP8 model support.
+#     The official SageAttention repo publishes no PyPI wheels for 2.x and
+#     community wheels are cp312-only, while this image is Python 3.10, so
+#     a builder stage with the CUDA devel image compiles the wheel with
+#     TORCH_CUDA_ARCH_LIST="12.0" (no GPU needed at build time).
 #   - entrypoint-wrapper.vast.sh reads secrets from /data/secrets/ instead
 #     of /vault/secrets/ (vast.ai volume default mount path is /data).
 #
@@ -22,6 +28,53 @@
 
 ARG BASE_IMAGE=derekhsu/comfyui-gputw:dev
 ARG CIVITAI_CLI_VERSION=v0.1.81
+# SageAttention build args:
+#   SAGEATTENTION_REF  - thu-ml/SageAttention git tag to build
+#   TORCH_VERSION      - exact torch version (e.g. 2.9.1+cu130); when set,
+#                        the builder installs this so the compiled extension
+#                        matches the torch already baked into BASE_IMAGE.
+#                        Empty = latest from the PYTORCH_CUDA_TAG index.
+#   PYTORCH_CUDA_TAG   - torch wheel index tag (must match BASE_IMAGE)
+#   CUDA_DEVEL_IMAGE   - devel image with nvcc matching PYTORCH_CUDA_TAG
+ARG SAGEATTENTION_REF=v2.2.0
+ARG TORCH_VERSION=
+ARG PYTORCH_CUDA_TAG=cu130
+ARG CUDA_DEVEL_IMAGE=nvidia/cuda:13.0.0-devel-ubuntu22.04
+
+# Builder: compile the SageAttention wheel. The runtime base has no nvcc,
+# so build here with the devel image. TORCH_CUDA_ARCH_LIST="12.0" targets
+# Blackwell (sm_120) and lets setup.py run without a GPU (CI-safe).
+# MAX_JOBS=4 keeps nvcc memory usage inside a 4-vCPU GHA runner.
+FROM ${CUDA_DEVEL_IMAGE} AS sage-builder
+
+ARG SAGEATTENTION_REF
+ARG TORCH_VERSION
+ARG PYTORCH_CUDA_TAG
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-dev git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN if [ -n "${TORCH_VERSION}" ]; then \
+        pip install --no-cache-dir "torch==${TORCH_VERSION}" \
+            --index-url "https://download.pytorch.org/whl/${PYTORCH_CUDA_TAG}"; \
+    else \
+        pip install --no-cache-dir torch \
+            --index-url "https://download.pytorch.org/whl/${PYTORCH_CUDA_TAG}"; \
+    fi \
+    && pip install --no-cache-dir ninja wheel
+
+RUN git clone --depth 1 --branch "${SAGEATTENTION_REF}" \
+        https://github.com/thu-ml/SageAttention.git /tmp/SageAttention \
+    && cd /tmp/SageAttention \
+    && TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=4 EXT_PARALLEL=4 \
+        python3 setup.py bdist_wheel \
+    && mkdir -p /sage-wheels && cp dist/*.whl /sage-wheels/ \
+    && ls -la /sage-wheels/
 
 FROM ${BASE_IMAGE}
 
@@ -75,6 +128,21 @@ RUN CIVITAI_VER="${CIVITAI_CLI_VERSION#v}"; \
     && chmod +x /usr/local/bin/civitai \
     && rm -rf /tmp/civitai* \
     && civitai version
+
+# Blackwell (RTX 5090) acceleration, vast-only by design (base untouched):
+#   - SageAttention 2.2.0 wheel from the sage-builder stage (sm_120).
+#     Enable per workflow with the ComfyUI-KJNodes "Patch Sage Attention"
+#     node (already installed via custom-nodes.txt), or globally with the
+#     --use-sage-attention launch flag (Triton backend; avoid it for
+#     Qwen/Wan models where it can produce black output — use the KJNodes
+#     node with sageattn_qk_int8_pv_fp16_cuda instead).
+#   - comfy-kitchen for NVFP4/FP8 quantized-model support (needs cu130 base).
+# Neither package declares torch as a dependency, so the base torch is
+# never upgraded or downgraded by this install.
+COPY --from=sage-builder /sage-wheels/*.whl /tmp/sage-wheels/
+RUN pip install --no-cache-dir /tmp/sage-wheels/*.whl comfy-kitchen \
+    && rm -rf /tmp/sage-wheels \
+    && python3 -c "from importlib.metadata import version; print('sageattention', version('sageattention')); print('comfy-kitchen', version('comfy-kitchen'))"
 
 # Preset installer for fetching Hugging Face and Civitai models into ComfyUI's
 # built-in models directory. This is intentionally only part of the Vast.ai

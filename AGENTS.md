@@ -35,7 +35,7 @@ Implications for design decisions:
 - The Vast.ai custom image optionally reads persistent secrets from `/data/secrets/` when a local volume is mounted at `/data`. Without a volume, secrets come solely from Vast.ai env vars.
 - Select Vast.ai's **docker ENTRYPOINT** launch mode. SSH and Jupyter launch modes replace the image entrypoint, so the wrapper cannot load secrets or assemble the default ComfyUI command. When using SSH mode, invoke `/opt/entrypoint-wrapper.sh` explicitly from the on-start script (see "Vast.ai SSH on-start script" below).
 - Environment variables configured in a Vast.ai account or template take priority over values in `/data/secrets/env.sh`.
-- The Vast.ai image includes `comfy-models`, a YAML-preset installer for models. It defaults to `/opt/comfyui/models`; use `--models-dir` only when a different ComfyUI models directory is required. It uses only the existing Hugging Face and Civitai credential environment variables.
+- The Vast.ai image includes `comfy-models`, a YAML-preset installer for models. It defaults to `/opt/comfyui/models`; use `--models-dir` only when a different ComfyUI models directory is required. It uses only the existing Hugging Face and Civitai credential environment variables. For RTX 5090 (Blackwell), build the vast variant on a cu130 base: the vast layer compiles SageAttention 2.2.0 (sm_120) from source in a builder stage plus `comfy-kitchen` for NVFP4 — enable per workflow via the KJNodes "Patch Sage Attention" node, or globally with `--use-sage-attention` (avoid the flag for Qwen/Wan models; use the KJNodes node instead).
 
 #### Vast.ai operation modes
 
@@ -144,7 +144,7 @@ Triggers: tag push (`v*`) and manual dispatch. Push to `main` does **not** auto-
 | --- | --- |
 | `Dockerfile` | Base image: nvidia/cuda + Python 3 + ComfyUI + PyTorch |
 | `Dockerfile.custom` | Custom layer: clones `custom-nodes.txt`, copies `extra_model_paths.yaml` |
-| `Dockerfile.vast` | Vast.ai custom layer: clones `custom-nodes.txt`, installs Civitai CLI, and uses the Vast.ai entrypoint wrapper |
+| `Dockerfile.vast` | Vast.ai custom layer: clones `custom-nodes.txt`, installs Civitai CLI, builds SageAttention 2.2.0 from source (sm_120, vast-only) + `comfy-kitchen`, and uses the Vast.ai entrypoint wrapper |
 | `custom-nodes.txt` | One node per line: `<git_url>,<ref>` (ref = branch/tag/SHA, empty = default) |
 | `extra_model_paths.yaml` | Maps `/vault/models` subdirs into ComfyUI's model scanner |
 | `entrypoint-wrapper.sh` | Loads secrets from `/vault/secrets/` at startup, then execs ComfyUI |
