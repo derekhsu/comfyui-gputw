@@ -71,7 +71,8 @@ RUN if [ -n "${TORCH_VERSION}" ]; then \
 RUN git clone --depth 1 --branch "${SAGEATTENTION_REF}" \
         https://github.com/thu-ml/SageAttention.git /tmp/SageAttention \
     && cd /tmp/SageAttention \
-    && TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=4 EXT_PARALLEL=4 \
+    && CXX_APPEND_FLAGS="-std=c++20" NVCC_APPEND_FLAGS="-std=c++20" \
+        TORCH_CUDA_ARCH_LIST="12.0" MAX_JOBS=4 EXT_PARALLEL=4 \
         python3 setup.py bdist_wheel \
     && mkdir -p /sage-wheels && cp dist/*.whl /sage-wheels/ \
     && ls -la /sage-wheels/
