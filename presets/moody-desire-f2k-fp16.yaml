@@ -1,0 +1,27 @@
+version: 1
+name: moody-desire-f2k-fp16
+
+# Flux.2 Klein 9B NSFW edit (Goon's F2K I2I workflow) 完整三件套，5090 專用。
+# 主 checkpoint 用全精度 fp16（18.2GB，5090 32GB VRAM 吃得下），避免 fp8 精度損失。
+# TE + VAE 條目與 moody-desire-f2k.yaml 完全相同，已下載過的會 skip。
+models:
+  - name: moody-desire-v3.1-fp16
+    type: diffusion_model
+    source:
+      provider: huggingface
+      repo_id: catlover1937/moody-desire-mix
+      filename: moody-desire-v3.1_00001_.safetensors
+
+  - name: qwen-3-8b-fp8
+    type: text_encoder
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/vae-text-encorder-for-flux-klein-9b
+      filename: split_files/text_encoders/qwen_3_8b_fp8mixed.safetensors
+
+  - name: flux2-vae
+    type: vae
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/flux2-dev
+      filename: split_files/vae/flux2-vae.safetensors
