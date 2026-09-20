@@ -1,0 +1,25 @@
+version: 1
+name: flux2-klein-9b-lora
+
+# Flux.2 Klein 9B 用 LoRA。
+models:
+  - name: flux2-klein-9b-consistency-v2
+    type: lora
+    source:
+      provider: huggingface
+      repo_id: dx8152/Flux2-Klein-9B-Consistency
+      filename: Flux2-Klein-9B-consistency-V2.safetensors
+
+  - name: 4x-clearreality-v1
+    type: upscale_model
+    source:
+      provider: huggingface
+      repo_id: Kim2091/ClearRealityV1
+      filename: 4x-ClearRealityV1.safetensors
+
+  - name: head-swap-flux-klein-9b
+    type: lora
+    source:
+      provider: huggingface
+      repo_id: 3doverride/testy
+      filename: head_swap_flux-klein_9b_000003500.safetensors

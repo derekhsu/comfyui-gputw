@@ -1,0 +1,32 @@
+version: 1
+name: krea2-5090-nvfp4
+
+# RTX 5090 (Blackwell, sm_120) variant of krea2-rtx3060-wanvae.yaml.
+# Diffusion model uses NVFP4 precision (~7.7GB vs 13.5GB int8) which needs
+# the cu130 base + comfy-kitchen cuda backend (both baked into the
+# vast-cu130 image). Text encoder stays int8 (runs once per generation,
+# negligible step-time impact) and VAE stays full precision.
+# TE + VAE entries are identical to krea2-rtx3060-wanvae.yaml so
+# comfy-models skips them when already downloaded.
+
+models:
+  - name: krea2-turbo-nvfp4
+    type: diffusion_model
+    source:
+      provider: huggingface
+      repo_id: Winnougan/Krea-2-Base-Turbo-NVFP4-FP8-INT8
+      filename: krea2_turbo_nvfp4.safetensors
+
+  - name: qwen3vl-4b-int8-convrot
+    type: text_encoder
+    source:
+      provider: huggingface
+      repo_id: Merserk/qwen3vl-4b-int8-convrot
+      filename: qwen3vl_4b_int8_convrot.safetensors
+
+  - name: wan-2.1-vae
+    type: vae
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Wan_2.1_ComfyUI_repackaged
+      filename: split_files/vae/wan_2.1_vae.safetensors
