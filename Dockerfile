@@ -2,7 +2,7 @@
 # amd64-only. Build with `docker buildx build --platform=linux/amd64 ...`.
 # Pin a ComfyUI release at build time via COMFYUI_VERSION.
 
-ARG COMFYUI_VERSION=v0.33.1
+ARG COMFYUI_VERSION=v0.36.0
 ARG PYTORCH_CUDA_TAG=cu128
 ARG CUDA_BASE_IMAGE=nvidia/cuda:12.8.0-runtime-ubuntu22.04
 ARG COMFYUI_PORT=8080
