@@ -1,0 +1,35 @@
+version: 1
+name: qwen-image-2.1-3090
+
+# Qwen-Image-2.1 for RTX 3090 (24GB): int8 diffusion + int8 text encoder.
+# Weights total ~17.4GB, leaving ~6GB for activations — enough for 1MP
+# output; at native 2K (4MP) watch for OOM and consider swapping the text
+# encoder to qwen3vl_8b_w4a8.safetensors (6.3GB, same repo) for headroom.
+#
+# Requires ComfyUI built at commit 6bfaacc or later (PR #16400, merged
+# 2026-09-19) — v0.36.0 does NOT include the nodes. Build with
+# COMFYUI_VERSION=<sha> until the next release tag ships.
+# 3090 (Ampere, sm_86): use the cu128 image variant; cu130 is only needed
+# for Blackwell (sm_120) / NVFP4.
+
+models:
+  - name: qwen-image-2.1-int8-convrot
+    type: diffusion_model
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Qwen-Image-2.1
+      filename: diffusion_models/qwen_image_2.1_int8_convrot.safetensors
+
+  - name: qwen3vl-8b-int8-convrot
+    type: text_encoder
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Qwen-Image-2.1
+      filename: text_encoders/qwen3vl_8b_int8_convrot.safetensors
+
+  - name: qwen-image-2.1-vae-bf16
+    type: vae
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Qwen-Image-2.1
+      filename: vae/qwen_image_2.1_vae_bf16.safetensors

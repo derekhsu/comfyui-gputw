@@ -1,0 +1,35 @@
+version: 1
+name: qwen-image-2.1-5090
+
+# Qwen-Image-2.1 for RTX 5090 (32GB): bf16 diffusion for full quality +
+# int8 text encoder. Weights total ~24.3GB — fits 32GB with headroom for
+# native 2K (4MP) generation. If you prefer the smaller download, swap the
+# diffusion entry for qwen_image_2.1_int8_convrot.safetensors (7.3GB).
+#
+# Requires ComfyUI built at commit 6bfaacc or later (PR #16400, merged
+# 2026-09-19) — v0.36.0 does NOT include the nodes. Build with
+# COMFYUI_VERSION=<sha> until the next release tag ships.
+# 5090 (Blackwell, sm_120): use the cu130 image variant (see
+# docs/rtx5090-migration.md).
+
+models:
+  - name: qwen-image-2.1-bf16
+    type: diffusion_model
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Qwen-Image-2.1
+      filename: diffusion_models/qwen_image_2.1_bf16.safetensors
+
+  - name: qwen3vl-8b-int8-convrot
+    type: text_encoder
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Qwen-Image-2.1
+      filename: text_encoders/qwen3vl_8b_int8_convrot.safetensors
+
+  - name: qwen-image-2.1-vae-bf16
+    type: vae
+    source:
+      provider: huggingface
+      repo_id: Comfy-Org/Qwen-Image-2.1
+      filename: vae/qwen_image_2.1_vae_bf16.safetensors
