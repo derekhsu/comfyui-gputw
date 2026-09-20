@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       comfyui_version:
-        description: "ComfyUI release tag (e.g. v0.36.0)"
+        description: "ComfyUI release tag (e.g. v0.36.0) or commit SHA"
         required: false
         default: "v0.36.0"
         type: string
@@ -124,7 +124,9 @@ jobs:
           if [ -n "$USER_TAG" ]; then
             FINAL_TAG="$USER_TAG"
           else
-            COMFYUI_VERSION_NO_V=$(echo "${{ steps.comfyui.outputs.comfyui_version }}" | sed 's/^v//')
+            # comfyui_version may be a tag (v0.36.0) or a commit SHA for
+            # unreleased features; shorten SHAs so the tag stays readable.
+            COMFYUI_VERSION_NO_V=$(echo "${{ steps.comfyui.outputs.comfyui_version }}" | sed 's/^v//' | cut -c1-12)
             # torch.__version__ for CUDA wheels reports e.g. "2.6.0+cu128";
             # strip the "+cuXXX" local-version suffix to get "2.6.0".
             # (tr -d '+cu' would delete individual chars and corrupt the version.)

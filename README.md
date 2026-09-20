@@ -230,7 +230,7 @@ with the baked-in `/opt/comfyui` layout and `extra_model_paths.yaml`.
 
 | Arg | Default | Description |
 | --- | --- | --- |
-| `COMFYUI_VERSION` | `v0.36.0` | ComfyUI release tag; downloaded as a zip |
+| `COMFYUI_VERSION` | `v0.36.0` | ComfyUI release tag or commit SHA (SHA = unreleased/nightly features); downloaded as a zip |
 | `PYTORCH_CUDA_TAG` | `cu128` | PyTorch wheel index suffix. Supported: `cu128`, `cu129`, `cu130`. CI auto-derives the matching `nvidia/cuda` base image from this tag. |
 | `CUDA_BASE_IMAGE` | `nvidia/cuda:12.8.0-runtime-ubuntu22.04` | `nvidia/cuda` base image. CI derives this from `PYTORCH_CUDA_TAG` (`cu128`→12.8.0, `cu129`→12.9.0, `cu130`→13.0.0); override only for custom bases. |
 | `COMFYUI_PORT` | `8080` | Sets the default listening port baked into the image. On gpuai this is fixed at build time (no runtime override). For local `docker run` you can still override via `-e COMFYUI_PORT=9090`. |
