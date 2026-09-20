@@ -22,6 +22,10 @@
 | `krea2_identity_edit_turbo.json` | editor（UI） | Turbo int8 + TE bf16 + wan VAE | 一般編輯（8 steps, CFG 1） |
 | `api/krea2_identity_edit_turbo_api.json` | API | 同上 | 程式化執行（POST /api/prompt） |
 | `api/krea2_identity_edit_raw_api.json` | API | Raw int8 + TE int8 + wan VAE | 移除類編輯（20 steps, CFG 3） |
+| `qwen_image_2.1_t2i.json` | editor（UI） | Qwen-Image-2.1 int8 + TE int8 + bf16 VAE | 文生圖（native 2K, alpha） |
+| `qwen_image_2.1_image_edit.json` | editor（UI） | 同上 | 指令式編輯（多圖參考 `<image1>`…`<image16>`） |
+
+Qwen-Image-2.1 workflow 來源：官方 `Comfy-Org/workflow_templates`（`image_qwen_image_2_1_t2i` / `image_qwen_image_2_1_image_edit`）。需要 ComfyUI ≥ commit `6bfaacc`（PR #16400）；模型見 `presets/qwen-image-2.1-3090.yaml` / `qwen-image-2.1-5090.yaml`。5090 使用者可在 loader 把 diffusion 換成 `qwen_image_2.1_bf16.safetensors`。
 
 Editor 版來源：節點包 `comfyui-krea2edit/workflows/krea2_identity_edit.json`。API 版已於 2026-08-22 在 instance 48375544 冒煙測試通過（turbo 版）。
 
