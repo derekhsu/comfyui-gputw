@@ -38,12 +38,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Fetch ComfyUI source as a zip — no .git history, smaller download and build context.
 # COMFYUI_VERSION may be a tag (v0.36.0) or a commit SHA (for unreleased features);
 # the generic /archive/<ref>.zip endpoint resolves both. The extracted dir is
-# ComfyUI-<ref-without-leading-v> for tags and ComfyUI-<sha> for commits.
+# ComfyUI-<ref-without-leading-v> for tags, but GitHub expands short SHAs to the
+# full 40-char SHA — so match the single extracted dir with a glob.
 WORKDIR /opt
 RUN curl -fsSL -o comfyui.zip \
         https://github.com/Comfy-Org/ComfyUI/archive/${COMFYUI_VERSION}.zip \
     && unzip -q comfyui.zip \
-    && mv ComfyUI-${COMFYUI_VERSION#v} ${COMFYUI_HOME} \
+    && mv ComfyUI-* ${COMFYUI_HOME} \
     && rm comfyui.zip
 
 WORKDIR ${COMFYUI_HOME}
