@@ -6,9 +6,10 @@ name: qwen-image-2.1-3090
 # output; at native 2K (4MP) watch for OOM and consider swapping the text
 # encoder to qwen3vl_8b_w4a8.safetensors (6.3GB, same repo) for headroom.
 #
-# Requires ComfyUI built at commit 6bfaacc or later (PR #16400, merged
-# 2026-09-19) — v0.36.0 does NOT include the nodes. Build with
-# COMFYUI_VERSION=<sha> until the next release tag ships.
+# Requires ComfyUI v0.37.0 or later — Qwen-Image-2.1 support landed in
+# PR #16400 (merged 2026-09-19, commit 6bfaacc) and ships from v0.37.0.
+# v0.36.0 and earlier do not include the nodes; build those with
+# COMFYUI_VERSION=<sha>.
 # 3090 (Ampere, sm_86): use the cu128 image variant; cu130 is only needed
 # for Blackwell (sm_120) / NVFP4.
 

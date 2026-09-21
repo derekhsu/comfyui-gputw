@@ -6,9 +6,10 @@ name: qwen-image-2.1-5090
 # native 2K (4MP) generation. If you prefer the smaller download, swap the
 # diffusion entry for qwen_image_2.1_int8_convrot.safetensors (7.3GB).
 #
-# Requires ComfyUI built at commit 6bfaacc or later (PR #16400, merged
-# 2026-09-19) — v0.36.0 does NOT include the nodes. Build with
-# COMFYUI_VERSION=<sha> until the next release tag ships.
+# Requires ComfyUI v0.37.0 or later — Qwen-Image-2.1 support landed in
+# PR #16400 (merged 2026-09-19, commit 6bfaacc) and ships from v0.37.0.
+# v0.36.0 and earlier do not include the nodes; build those with
+# COMFYUI_VERSION=<sha>.
 # 5090 (Blackwell, sm_120): use the cu130 image variant (see
 # docs/rtx5090-migration.md).
 

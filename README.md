@@ -252,7 +252,7 @@ Triggers:
 - **Tag push** (`v*`): e.g. `git tag v0.37.0 && git push --tags` → builds the **cu128** (primary) variant only: base `:v0.37.0-cu128-pt<torch>` + `:latest-cu128`, custom `:custom-v0.37.0-cu128-pt<torch>` + `:custom-latest-cu128` (the `pt*` suffix is read from the actually-installed torch at build time)
 - **Manual dispatch**: Actions tab → Run workflow, with `comfyui_version`, `pytorch_cuda_tag` (cu128/cu129/cu130), optional `cuda_base_image`, and `image_tag` inputs. Leave `image_tag` empty for auto-generated version tags (also gets `latest-<cuda>`/`custom-latest-<cuda>`); set it to `dev` for a floating dev tag (no `latest` alias). To publish all three CUDA variants, dispatch once per `pytorch_cuda_tag`.
 
-Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.37.0-cu130-pt2.12.0`. Custom image tags are `custom-` + the base tag; Vast.ai tags are `vast-` + the base tag. Each CUDA variant gets its own rolling alias: `latest-cu128`/`latest-cu129`/`latest-cu130`, `custom-latest-<cuda>`, `vast-latest-<cuda>`. For production, deploy the pinned `custom-<version>` tag; for ad-hoc testing, use `custom-latest-<cuda>`.
+Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.37.0-cu130-pt2.11.0`. Custom image tags are `custom-` + the base tag; Vast.ai tags are `vast-` + the base tag. Each CUDA variant gets its own rolling alias: `latest-cu128`/`latest-cu129`/`latest-cu130`, `custom-latest-<cuda>`, `vast-latest-<cuda>`. For production, deploy the pinned `custom-<version>` tag; for ad-hoc testing, use `custom-latest-<cuda>`.
 
 ### Adding custom nodes
 
