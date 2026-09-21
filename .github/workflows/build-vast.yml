@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       base_tag:
-        description: "Base image tag to build on (e.g. v0.33.1-cu128-pt<torch>, dev, latest)"
+        description: "Base image tag to build on (e.g. v0.37.0-cu128-pt2.11.0, dev, latest)"
         required: true
         default: "latest"
         type: string
@@ -57,7 +57,7 @@ jobs:
           else
             FINAL_TAG="vast-${BASE_TAG}"
           fi
-          # Extract CUDA tag from base_tag (e.g. v0.33.1-cu130-pt2.12.0 -> cu130)
+          # Extract CUDA tag from base_tag (e.g. v0.37.0-cu130-pt2.11.0 -> cu130)
           # for per-CUDA vast-latest alias. Falls back to empty for dev/latest.
           CUDA_TAG=$(echo "${BASE_TAG}" | grep -oE 'cu[0-9]+' | head -1 || true)
           echo "final_tag=${FINAL_TAG}" >> "$GITHUB_OUTPUT"

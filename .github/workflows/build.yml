@@ -44,7 +44,7 @@ jobs:
         id: comfyui
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            # strip leading "v" from the git tag, e.g. v0.37.0 -> 0.33.1
+            # strip leading "v" from the git tag, e.g. v0.37.0 -> 0.37.0
             VERSION="${GITHUB_REF_NAME#v}"
             echo "comfyui_version=v${VERSION}" >> "$GITHUB_OUTPUT"
           else
