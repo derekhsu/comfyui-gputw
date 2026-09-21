@@ -8,13 +8,13 @@ Container image for [ComfyUI](https://github.com/comfyanonymous/ComfyUI), optimi
 
 | Tag | Description |
 | --- | --- |
-| `custom-v0.36.0-cu128-pt2.11.0` | **Production** — pinned ComfyUI v0.36.0 + CUDA 12.8 + PyTorch 2.11.0, with 26 custom nodes |
-| `custom-v3dd559d81f74-cu128-pt2.11.0` | ComfyUI master @ `3dd559d` (Qwen-Image-2.1 support), cu128 |
-| `custom-v3dd559d81f74-cu130-pt2.11.0` | ComfyUI master @ `3dd559d` (Qwen-Image-2.1 support), cu130 — for RTX 5090 |
+| `custom-v0.37.0-cu128-pt2.11.0` | **Production** — pinned ComfyUI v0.37.0 + CUDA 12.8 + PyTorch 2.11.0, with 26 custom nodes |
+| `custom-v0.37.0-cu130-pt2.11.0` | ComfyUI v0.37.0, cu130 — for RTX 5090 (Blackwell) |
+| `custom-v0.36.0-cu128-pt2.11.0` | Previous release — ComfyUI v0.36.0, cu128 |
 | `custom-latest-cu128` | Rolling tag for the newest cu128 custom build |
 | `custom-latest-cu130` | Rolling tag for the newest cu130 custom build |
 | `custom-latest-cu132` | Rolling tag for the newest cu132 custom build |
-| `v0.36.0-cu128-pt2.11.0` | Base image only (no custom nodes), cu128 |
+| `v0.37.0-cu128-pt2.11.0` | Base image only (no custom nodes), cu128 |
 | `latest-cu128` / `latest-cu130` / `latest-cu132` | Rolling base tag per CUDA variant |
 | `vast-<base_tag>` | Vast.ai custom image (Civitai CLI bundled) |
 | `vast-latest-cu128` / `vast-latest-cu130` / `vast-latest-cu132` | Rolling Vast.ai tag per CUDA variant |
@@ -25,7 +25,7 @@ Container image for [ComfyUI](https://github.com/comfyanonymous/ComfyUI), optimi
 
 In the gpuai deploy form, set:
 
-- **Image**: `derekhsu/comfyui-gputw:custom-v0.36.0-cu128-pt2.11.0`
+- **Image**: `derekhsu/comfyui-gputw:custom-v0.37.0-cu128-pt2.11.0`
 - **Port**: `8080`
 
 The container listens on `0.0.0.0:8080`. No volume mounts needed — gpuai auto-mounts `/vault` for persistent storage.
