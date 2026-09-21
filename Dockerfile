@@ -2,7 +2,7 @@
 # amd64-only. Build with `docker buildx build --platform=linux/amd64 ...`.
 # Pin a ComfyUI release at build time via COMFYUI_VERSION.
 
-ARG COMFYUI_VERSION=v0.36.0
+ARG COMFYUI_VERSION=v0.37.0
 ARG PYTORCH_CUDA_TAG=cu128
 ARG CUDA_BASE_IMAGE=nvidia/cuda:12.8.0-runtime-ubuntu22.04
 ARG COMFYUI_PORT=8080
@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Fetch ComfyUI source as a zip — no .git history, smaller download and build context.
-# COMFYUI_VERSION may be a tag (v0.36.0) or a commit SHA (for unreleased features);
+# COMFYUI_VERSION may be a tag (v0.37.0) or a commit SHA (for unreleased features);
 # the generic /archive/<ref>.zip endpoint resolves both. The extracted dir is
 # ComfyUI-<ref-without-leading-v> for tags, but GitHub expands short SHAs to the
 # full 40-char SHA — so match the single extracted dir with a glob.

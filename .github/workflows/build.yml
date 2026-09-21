@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       comfyui_version:
-        description: "ComfyUI release tag (e.g. v0.36.0) or commit SHA"
+        description: "ComfyUI release tag (e.g. v0.37.0) or commit SHA"
         required: false
-        default: "v0.36.0"
+        default: "v0.37.0"
         type: string
       pytorch_cuda_tag:
         description: "PyTorch CUDA tag (cu128, cu129, cu130)"
@@ -44,7 +44,7 @@ jobs:
         id: comfyui
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            # strip leading "v" from the git tag, e.g. v0.33.1 -> 0.33.1
+            # strip leading "v" from the git tag, e.g. v0.37.0 -> 0.33.1
             VERSION="${GITHUB_REF_NAME#v}"
             echo "comfyui_version=v${VERSION}" >> "$GITHUB_OUTPUT"
           else
@@ -124,7 +124,7 @@ jobs:
           if [ -n "$USER_TAG" ]; then
             FINAL_TAG="$USER_TAG"
           else
-            # comfyui_version may be a tag (v0.36.0) or a commit SHA for
+            # comfyui_version may be a tag (v0.37.0) or a commit SHA for
             # unreleased features; shorten SHAs so the tag stays readable.
             COMFYUI_VERSION_NO_V=$(echo "${{ steps.comfyui.outputs.comfyui_version }}" | sed 's/^v//' | cut -c1-12)
             # torch.__version__ for CUDA wheels reports e.g. "2.6.0+cu128";

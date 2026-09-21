@@ -18,12 +18,12 @@ docker buildx build --platform=linux/amd64 -t comfyui-gputw:local --load .
 
 The Dockerfile also pins `FROM --platform=linux/amd64` as a safety net, but the buildx command is the source of truth.
 
-Default ComfyUI version is `v0.36.0`. To pin a different release:
+Default ComfyUI version is `v0.37.0`. To pin a different release:
 
 ```bash
 docker buildx build --platform=linux/amd64 \
-    --build-arg COMFYUI_VERSION=v0.36.0 \
-    -t comfyui-gputw:v0.36.0 --load .
+    --build-arg COMFYUI_VERSION=v0.37.0 \
+    -t comfyui-gputw:v0.37.0 --load .
 ```
 
 To build with a different CUDA variant (default `cu128`; also supported: `cu129`, `cu130`):
@@ -32,7 +32,7 @@ To build with a different CUDA variant (default `cu128`; also supported: `cu129`
 docker buildx build --platform=linux/amd64 \
     --build-arg PYTORCH_CUDA_TAG=cu130 \
     --build-arg CUDA_BASE_IMAGE=nvidia/cuda:13.0.0-runtime-ubuntu22.04 \
-    -t comfyui-gputw:v0.36.0-cu130 --load .
+    -t comfyui-gputw:v0.37.0-cu130 --load .
 ```
 
 See [ComfyUI releases](https://github.com/comfyanonymous/ComfyUI/releases) for available tags.
@@ -42,13 +42,13 @@ See [ComfyUI releases](https://github.com/comfyanonymous/ComfyUI/releases) for a
 ```bash
 # Docker Hub
 docker buildx build --platform=linux/amd64 \
-    --build-arg COMFYUI_VERSION=v0.36.0 \
-    -t docker.io/<your-user>/comfyui-gputw:v0.36.0 --push .
+    --build-arg COMFYUI_VERSION=v0.37.0 \
+    -t docker.io/<your-user>/comfyui-gputw:v0.37.0 --push .
 
 # GitHub Container Registry
 docker buildx build --platform=linux/amd64 \
-    --build-arg COMFYUI_VERSION=v0.36.0 \
-    -t ghcr.io/<your-user>/comfyui-gputw:v0.36.0 --push .
+    --build-arg COMFYUI_VERSION=v0.37.0 \
+    -t ghcr.io/<your-user>/comfyui-gputw:v0.37.0 --push .
 ```
 
 ## Run
@@ -230,7 +230,7 @@ with the baked-in `/opt/comfyui` layout and `extra_model_paths.yaml`.
 
 | Arg | Default | Description |
 | --- | --- | --- |
-| `COMFYUI_VERSION` | `v0.36.0` | ComfyUI release tag or commit SHA (SHA = unreleased/nightly features); downloaded as a zip |
+| `COMFYUI_VERSION` | `v0.37.0` | ComfyUI release tag or commit SHA (SHA = unreleased/nightly features); downloaded as a zip |
 | `PYTORCH_CUDA_TAG` | `cu128` | PyTorch wheel index suffix. Supported: `cu128`, `cu129`, `cu130`. CI auto-derives the matching `nvidia/cuda` base image from this tag. |
 | `CUDA_BASE_IMAGE` | `nvidia/cuda:12.8.0-runtime-ubuntu22.04` | `nvidia/cuda` base image. CI derives this from `PYTORCH_CUDA_TAG` (`cu128`→12.8.0, `cu129`→12.9.0, `cu130`→13.0.0); override only for custom bases. |
 | `COMFYUI_PORT` | `8080` | Sets the default listening port baked into the image. On gpuai this is fixed at build time (no runtime override). For local `docker run` you can still override via `-e COMFYUI_PORT=9090`. |
@@ -249,10 +249,10 @@ This Dockerfile is provided as-is. ComfyUI itself is licensed under GPL-3.0.
 
 Triggers:
 
-- **Tag push** (`v*`): e.g. `git tag v0.36.0 && git push --tags` → builds the **cu128** (primary) variant only: base `:v0.36.0-cu128-pt<torch>` + `:latest-cu128`, custom `:custom-v0.36.0-cu128-pt<torch>` + `:custom-latest-cu128` (the `pt*` suffix is read from the actually-installed torch at build time)
+- **Tag push** (`v*`): e.g. `git tag v0.37.0 && git push --tags` → builds the **cu128** (primary) variant only: base `:v0.37.0-cu128-pt<torch>` + `:latest-cu128`, custom `:custom-v0.37.0-cu128-pt<torch>` + `:custom-latest-cu128` (the `pt*` suffix is read from the actually-installed torch at build time)
 - **Manual dispatch**: Actions tab → Run workflow, with `comfyui_version`, `pytorch_cuda_tag` (cu128/cu129/cu130), optional `cuda_base_image`, and `image_tag` inputs. Leave `image_tag` empty for auto-generated version tags (also gets `latest-<cuda>`/`custom-latest-<cuda>`); set it to `dev` for a floating dev tag (no `latest` alias). To publish all three CUDA variants, dispatch once per `pytorch_cuda_tag`.
 
-Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.36.0-cu130-pt2.12.0`. Custom image tags are `custom-` + the base tag; Vast.ai tags are `vast-` + the base tag. Each CUDA variant gets its own rolling alias: `latest-cu128`/`latest-cu129`/`latest-cu130`, `custom-latest-<cuda>`, `vast-latest-<cuda>`. For production, deploy the pinned `custom-<version>` tag; for ad-hoc testing, use `custom-latest-<cuda>`.
+Base image tags follow the format `v<comfyui>-<cuda_tag>-pt<torch_version>`, e.g. `v0.37.0-cu130-pt2.12.0`. Custom image tags are `custom-` + the base tag; Vast.ai tags are `vast-` + the base tag. Each CUDA variant gets its own rolling alias: `latest-cu128`/`latest-cu129`/`latest-cu130`, `custom-latest-<cuda>`, `vast-latest-<cuda>`. For production, deploy the pinned `custom-<version>` tag; for ad-hoc testing, use `custom-latest-<cuda>`.
 
 ### Adding custom nodes
 
