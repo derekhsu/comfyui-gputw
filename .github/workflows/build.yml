@@ -28,6 +28,11 @@ on:
 
 env:
   IMAGE_NAME: derekhsu/comfyui-gputw
+  # Per-run staging tag. A single shared mutable tag (e.g. ":placeholder")
+  # races when cu128/cu129/cu130 dispatches run concurrently: each run's
+  # `docker run :staging` and `imagetools create` can then read ANOTHER
+  # variant's image and publish it under this variant's tag.
+  STAGING_TAG: staging-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   build:
@@ -91,7 +96,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ env.IMAGE_NAME }}:placeholder
+          tags: ${{ env.IMAGE_NAME }}:${{ env.STAGING_TAG }}
           build-args: |
             COMFYUI_VERSION=${{ steps.comfyui.outputs.comfyui_version }}
             PYTORCH_CUDA_TAG=${{ steps.args.outputs.pytorch_cuda_tag }}
@@ -109,10 +114,35 @@ jobs:
       - name: Read installed PyTorch version
         id: torch
         run: |
-          TORCH_VERSION=$(docker run --rm --platform linux/amd64 --entrypoint python3 "${{ env.IMAGE_NAME }}:placeholder" \
+          TORCH_VERSION=$(docker run --rm --platform linux/amd64 --entrypoint python3 "${{ env.IMAGE_NAME }}:${{ env.STAGING_TAG }}" \
             -c "import torch; print(torch.__version__)")
           echo "torch_version=$TORCH_VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected torch $TORCH_VERSION"
+
+      - name: Verify the built image really is the requested CUDA variant
+        run: |
+          # The tag only carries the ComfyUI version and the torch version,
+          # with the "+cuXXX" local suffix stripped — so a build that ends up
+          # containing the wrong CUDA variant is invisible in the tag name.
+          # A cu130 build can silently produce cu128 content (e.g. through a
+          # build-push race) and still be published as ...-cu130-.... Read the
+          # variant out of the finished image and refuse to tag on mismatch.
+          IMAGE="${{ env.IMAGE_NAME }}:${{ env.STAGING_TAG }}"
+          EXPECTED_TAG="${{ steps.args.outputs.pytorch_cuda_tag }}"
+          EXPECTED_CUDA=$(printf '%s' "${{ steps.args.outputs.cuda_base_image }}" | sed -E 's#.*cuda:([0-9]+\.[0-9]+).*#\1#')
+          IMAGE_TORCH=$(docker run --rm --platform linux/amd64 --entrypoint python3 "$IMAGE" -c "import torch; print(torch.__version__)")
+          IMAGE_CUDA=$(docker run --rm --platform linux/amd64 --entrypoint sh "$IMAGE" -c 'echo $CUDA_VERSION')
+          TORCH_CUDA=$(printf '%s' "$IMAGE_TORCH" | grep -oE '\+cu[0-9]+' | tr -d '+')
+          echo "built image: torch=$IMAGE_TORCH (cuda=${TORCH_CUDA:-none}) CUDA_VERSION=$IMAGE_CUDA"
+          echo "requested  : pytorch_cuda_tag=$EXPECTED_TAG cuda_base_image=${{ steps.args.outputs.cuda_base_image }}"
+          if [ "$TORCH_CUDA" != "$EXPECTED_TAG" ]; then
+            echo "::error::Refusing to tag: requested pytorch_cuda_tag=${EXPECTED_TAG} but the built image has torch ${IMAGE_TORCH}."
+            exit 1
+          fi
+          case "$IMAGE_CUDA" in
+            "$EXPECTED_CUDA"*) echo "✅ image CUDA $IMAGE_CUDA matches requested $EXPECTED_TAG ($EXPECTED_CUDA)" ;;
+            *) echo "::error::Refusing to tag: requested CUDA ${EXPECTED_CUDA} but the built image reports CUDA_VERSION=${IMAGE_CUDA}."; exit 1 ;;
+          esac
 
       - name: Tag and push with final tag
         id: tag
@@ -138,11 +168,13 @@ jobs:
           # instead of a single `latest` — each CUDA variant gets its own
           # rolling tag so users can pin by CUDA major version.
           CUDA_TAG="${{ steps.args.outputs.pytorch_cuda_tag }}"
+          # Source is this run's own staging tag (unique per run_id+attempt),
+          # so concurrent variant dispatches cannot alias each other's image.
           docker buildx imagetools create \
             -t "${{ env.IMAGE_NAME }}:${FINAL_TAG}" \
             -t "${{ env.IMAGE_NAME }}:latest-${CUDA_TAG}" \
-            "${{ env.IMAGE_NAME }}:placeholder"
-          docker buildx imagetools rm "${{ env.IMAGE_NAME }}:placeholder" 2>&1 || true
+            "${{ env.IMAGE_NAME }}:${{ env.STAGING_TAG }}"
+          docker buildx imagetools rm "${{ env.IMAGE_NAME }}:${{ env.STAGING_TAG }}" 2>&1 || true
           echo "final_tag=${FINAL_TAG}" >> "$GITHUB_OUTPUT"
 
     outputs:

@@ -91,6 +91,22 @@ jobs:
           echo "devel_image=${DEVEL_IMAGE}" >> "$GITHUB_OUTPUT"
           echo "Base torch ${TORCH_FULL} (cuda=${TORCH_CUDA_TAG}, devel=${DEVEL_IMAGE})"
 
+      - name: Cross-check base tag CUDA segment against the base image
+        if: ${{ steps.tag.outputs.cuda_tag != '' }}
+        run: |
+          # base_tag's cuXXX segment is only a label. If the published base tag
+          # is mislabeled (e.g. a cu130 tag actually serving cu128 content),
+          # building on it would mint yet another wrongly labelled vast-cu130
+          # image and refresh vast-latest-cu130 with the wrong variant, so stop
+          # instead. Mirrors the guard in build.yml.
+          BASE_TAG_CUDA="${{ steps.tag.outputs.cuda_tag }}"
+          IMAGE_CUDA="${{ steps.torch.outputs.torch_cuda_tag }}"
+          if [ "$BASE_TAG_CUDA" != "$IMAGE_CUDA" ]; then
+            echo "::error::base_tag '${{ inputs.base_tag }}' says ${BASE_TAG_CUDA} but the base image has torch ${{ steps.torch.outputs.torch_version }} (${IMAGE_CUDA}). Fix/rebuild the base image first."
+            exit 1
+          fi
+          echo "✅ base image torch ${{ steps.torch.outputs.torch_version }} matches base_tag segment ${BASE_TAG_CUDA}"
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
